@@ -169,10 +169,12 @@ create table bookings (
   start_at        timestamptz not null,
   duration_minutes int not null check (duration_minutes > 0),
   -- 由 start_at + duration 自動算出的時間範圍，供 exclusion 用
+  -- 注意: 必須用 make_interval(IMMUTABLE), 不能用 duration_minutes * interval '1 minute'(STABLE),
+  -- 否則 Postgres 會以 42P17 generation expression is not immutable 拒絕 generated column。
   time_range      tstzrange generated always as
-                    (tstzrange(start_at, start_at + (duration_minutes * interval '1 minute'))) stored,
+                    (tstzrange(start_at, start_at + make_interval(mins => duration_minutes))) stored,
   end_at          timestamptz generated always as
-                    (start_at + (duration_minutes * interval '1 minute')) stored,
+                    (start_at + make_interval(mins => duration_minutes)) stored,
   status          booking_status not null default 'pending',
   note            text,
   created_at      timestamptz not null default now(),
