@@ -1,0 +1,240 @@
+<script setup lang="ts">
+// 前台 - 公開預約頁 (anon)
+// 流程: 選服務 → 選設計師(或不指定) → 選日期 → 選時段 → 填資料 → 送出
+// 所有寫入走 SECURITY DEFINER RPC,不直接寫表 (RLS 已擋)。
+definePageMeta({ layout: 'storefront' })
+
+interface Service { id: string; name: string; duration_minutes: number; price: number; deposit_amount: number | null }
+interface Staff { id: string; name: string }
+
+const supabase = useSupabaseClient()
+const tenant = useState<{ id: string; name: string; slug: string; timezone: string } | null>('tenant')
+const { getAvailableSlots, createBooking, loading: bkLoading, error: bkError } = useBooking()
+
+// ---------- step 1: 載入服務 ----------
+const services = ref<Service[]>([])
+const selectedServiceId = ref<string | null>(null)
+const selectedService = computed(() => services.value.find(s => s.id === selectedServiceId.value) ?? null)
+
+async function loadServices() {
+  if (!tenant.value) return
+  const { data } = await supabase
+    .from('services')
+    .select('id, name, duration_minutes, price, deposit_amount')
+    .eq('tenant_id', tenant.value.id)
+    .eq('is_active', true)
+    .order('name')
+  services.value = (data ?? []) as Service[]
+}
+await loadServices()
+
+// ---------- step 2: 載入該服務可做的設計師 ----------
+const eligibleStaff = ref<Staff[]>([])
+// null = 還沒選; '__any__' = 不指定; 否則 staff.id
+const selectedStaffId = ref<string | null>(null)
+
+watch(selectedServiceId, async (sid) => {
+  selectedStaffId.value = null
+  eligibleStaff.value = []
+  if (!sid || !tenant.value) return
+  // staff_services join staff,取啟用 + 能做此服務的設計師
+  const { data } = await supabase
+    .from('staff_services')
+    .select('staff:staff_id(id, name, is_active, tenant_id)')
+    .eq('service_id', sid)
+  const list = (data ?? [])
+    .map((r: any) => r.staff)
+    .filter((s: any) => s && s.is_active && s.tenant_id === tenant.value!.id)
+  eligibleStaff.value = list as Staff[]
+})
+
+// ---------- step 3: 日期 → 取可用時段 ----------
+const todayStr = new Date().toISOString().slice(0, 10)
+const selectedDate = ref(todayStr)
+const slots = ref<string[]>([])
+const slotsLoading = ref(false)
+const selectedSlot = ref<string | null>(null)
+
+watch([selectedServiceId, selectedStaffId, selectedDate], async ([sid, stf, date]) => {
+  selectedSlot.value = null
+  slots.value = []
+  if (!sid || !stf || !date) return
+  slotsLoading.value = true
+  try {
+    if (stf === '__any__') {
+      // 不指定設計師 → 把所有可選設計師的時段聯集後去重
+      const all = await Promise.all(
+        eligibleStaff.value.map(s => getAvailableSlots({ staffId: s.id, serviceId: sid, date })),
+      )
+      const set = new Set<string>()
+      for (const arr of all) for (const t of arr) set.add(t)
+      slots.value = Array.from(set).sort()
+    } else {
+      slots.value = await getAvailableSlots({ staffId: stf, serviceId: sid, date })
+    }
+  } finally {
+    slotsLoading.value = false
+  }
+})
+
+function fmtSlot(iso: string) {
+  // 轉成店家當地時區的 HH:mm
+  const d = new Date(iso)
+  return d.toLocaleTimeString('zh-TW', {
+    timeZone: tenant.value?.timezone ?? 'Asia/Taipei',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
+
+// ---------- step 4: 填資料 + 送出 ----------
+const customer = reactive({ name: '', phone: '', email: '', note: '' })
+const submitted = ref<{ bookingId: string; staffId: string | null } | null>(null)
+
+async function submit() {
+  if (!tenant.value || !selectedServiceId.value || !selectedSlot.value) return
+  const useAny = selectedStaffId.value === '__any__'
+  const result = await createBooking({
+    tenantId: tenant.value.id,
+    serviceId: selectedServiceId.value,
+    startAt: selectedSlot.value,
+    customerName: customer.name,
+    customerPhone: customer.phone,
+    customerEmail: customer.email || null,
+    note: customer.note || null,
+    staffId: useAny ? undefined : selectedStaffId.value!,
+  })
+  if (result) submitted.value = result
+}
+
+function reset() {
+  submitted.value = null
+  selectedServiceId.value = null
+  selectedStaffId.value = null
+  selectedSlot.value = null
+  customer.name = ''
+  customer.phone = ''
+  customer.email = ''
+  customer.note = ''
+}
+</script>
+
+<template>
+  <main class="page">
+    <header class="head">
+      <h1>{{ tenant?.name ?? '線上預約' }}</h1>
+      <p v-if="!tenant" class="muted">店家設定中,請稍候。</p>
+    </header>
+
+    <!-- 成功畫面 -->
+    <section v-if="submitted" class="card success">
+      <h2>✅ 預約已送出</h2>
+      <p>預約編號: <code>{{ submitted.bookingId }}</code></p>
+      <p v-if="selectedService?.deposit_amount" class="warn">
+        本服務需收訂金 ${{ selectedService.deposit_amount }},
+        我們會在 24 小時內聯絡你完成付款,逾時系統會自動釋放時段。
+      </p>
+      <button @click="reset">再約一次</button>
+    </section>
+
+    <template v-else-if="tenant">
+      <!-- step 1 服務 -->
+      <section class="card">
+        <h2>1. 選擇服務</h2>
+        <div class="choices">
+          <button v-for="s in services" :key="s.id"
+                  class="choice"
+                  :class="{ active: selectedServiceId === s.id }"
+                  @click="selectedServiceId = s.id">
+            <strong>{{ s.name }}</strong>
+            <span class="muted">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
+            <span v-if="s.deposit_amount" class="tag">需訂金 ${{ s.deposit_amount }}</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- step 2 設計師 -->
+      <section v-if="selectedServiceId" class="card">
+        <h2>2. 選擇設計師</h2>
+        <p v-if="!eligibleStaff.length" class="muted">此服務目前無可預約設計師。</p>
+        <div v-else class="choices">
+          <button class="choice"
+                  :class="{ active: selectedStaffId === '__any__' }"
+                  @click="selectedStaffId = '__any__'">
+            <strong>不指定</strong>
+            <span class="muted">由系統指派最快有空的</span>
+          </button>
+          <button v-for="s in eligibleStaff" :key="s.id"
+                  class="choice"
+                  :class="{ active: selectedStaffId === s.id }"
+                  @click="selectedStaffId = s.id">
+            <strong>{{ s.name }}</strong>
+          </button>
+        </div>
+      </section>
+
+      <!-- step 3 日期 + 時段 -->
+      <section v-if="selectedStaffId" class="card">
+        <h2>3. 選擇日期與時段</h2>
+        <label>日期
+          <input v-model="selectedDate" type="date" :min="todayStr" />
+        </label>
+        <div v-if="slotsLoading" class="muted">查詢中…</div>
+        <div v-else-if="!slots.length" class="muted">這天沒有可預約時段,請換一天。</div>
+        <div v-else class="slots">
+          <button v-for="t in slots" :key="t"
+                  class="slot"
+                  :class="{ active: selectedSlot === t }"
+                  @click="selectedSlot = t">
+            {{ fmtSlot(t) }}
+          </button>
+        </div>
+      </section>
+
+      <!-- step 4 填資料 -->
+      <section v-if="selectedSlot" class="card">
+        <h2>4. 填寫聯絡資料</h2>
+        <form class="contact" @submit.prevent="submit">
+          <label>姓名 *<input v-model="customer.name" required /></label>
+          <label>電話 *<input v-model="customer.phone" required pattern="[0-9+\-\s]{6,}" /></label>
+          <label>Email<input v-model="customer.email" type="email" placeholder="可不填" /></label>
+          <label>備註<textarea v-model="customer.note" rows="2" placeholder="特殊需求,可空白" /></label>
+
+          <p v-if="bkError" class="err">{{ bkError }}</p>
+
+          <button :disabled="bkLoading" type="submit" class="primary">
+            {{ bkLoading ? '送出中…' : '送出預約' }}
+          </button>
+        </form>
+      </section>
+    </template>
+  </main>
+</template>
+
+<style scoped>
+.page { max-width: 640px; margin: 2rem auto; padding: 0 1rem; font-family: system-ui; line-height: 1.5; }
+.head h1 { margin: 0 0 0.5rem; }
+.muted { color: #888; font-size: 0.9rem; }
+.tag { display: inline-block; background: #fff5e6; color: #b35900; padding: 0.05rem 0.4rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.4rem; }
+.warn { background: #fff8e1; padding: 0.6rem 0.8rem; border-radius: 6px; color: #8a6d00; }
+.card { background: #fff; padding: 1.1rem 1.25rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 1rem; }
+.card h2 { font-size: 1rem; margin: 0 0 0.75rem; color: #333; }
+.choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.6rem; }
+.choice {
+  display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start;
+  padding: 0.8rem 0.9rem; border: 1px solid #ddd; border-radius: 6px;
+  background: #fff; cursor: pointer; text-align: left; font: inherit;
+}
+.choice.active { border-color: #1a1a1a; box-shadow: 0 0 0 2px #1a1a1a inset; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 0.7rem; }
+.slot { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font: inherit; }
+.slot.active { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
+.contact { display: flex; flex-direction: column; gap: 0.7rem; }
+.contact label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+.contact input, .contact textarea { padding: 0.5rem 0.65rem; border: 1px solid #ddd; border-radius: 4px; font: inherit; }
+button.primary { background: #1a1a1a; color: #fff; padding: 0.7rem; border: 0; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.success { border-color: #c8e6c9; background: #f1f8f4; }
+.err { color: #c0392b; font-size: 0.9rem; }
+code { background: #f4f4f4; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
+label > input[type="date"] { margin-left: 0.5rem; }
+</style>
