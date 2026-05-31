@@ -15,6 +15,16 @@
 create extension if not exists btree_gist;   -- exclusion constraint 需要(uuid 等值比較)
 create extension if not exists pgcrypto;      -- gen_random_uuid()
 
+-- ---------- IMMUTABLE 加分鐘輔助 ----------
+-- Postgres 將 `timestamptz + interval` 標為 STABLE (DST 顧慮),導致 generated column
+-- 拋 42P17。包一層 IMMUTABLE 函式繞過; 分鐘運算與 session/timezone 無關,標 IMMUTABLE 安全。
+create or replace function public.ts_plus_minutes(ts timestamptz, mins int)
+returns timestamptz
+language sql
+immutable
+parallel safe
+as $$ select ts + make_interval(mins => mins) $$;
+
 -- ---------- 列舉型別 ----------
 create type plan_tier          as enum ('free', 'basic', 'pro');
 create type subscription_status as enum ('trialing', 'active', 'past_due', 'paused', 'canceled');
@@ -169,12 +179,12 @@ create table bookings (
   start_at        timestamptz not null,
   duration_minutes int not null check (duration_minutes > 0),
   -- 由 start_at + duration 自動算出的時間範圍，供 exclusion 用
-  -- 注意: 必須用 make_interval(IMMUTABLE), 不能用 duration_minutes * interval '1 minute'(STABLE),
-  -- 否則 Postgres 會以 42P17 generation expression is not immutable 拒絕 generated column。
+  -- 必須透過 IMMUTABLE 函式 ts_plus_minutes (見最上方),不能直接 + interval,
+  -- 否則 Postgres 以 42P17 generation expression is not immutable 拒絕。
   time_range      tstzrange generated always as
-                    (tstzrange(start_at, start_at + make_interval(mins => duration_minutes))) stored,
+                    (tstzrange(start_at, public.ts_plus_minutes(start_at, duration_minutes))) stored,
   end_at          timestamptz generated always as
-                    (start_at + make_interval(mins => duration_minutes)) stored,
+                    (public.ts_plus_minutes(start_at, duration_minutes)) stored,
   status          booking_status not null default 'pending',
   note            text,
   created_at      timestamptz not null default now(),
