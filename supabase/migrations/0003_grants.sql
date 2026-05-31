@@ -28,6 +28,23 @@ to authenticated;
 -- 給 sequence 用 (gen_random_uuid 不需要,但若之後有 serial 會需要)
 grant usage on all sequences in schema public to authenticated;
 
+-- ---------- service_role (webhook / cleanup job / 管理用) ----------
+-- service_role 雖然會 bypass RLS,但 PostgreSQL 表級 GRANT 仍需明授。
+grant select, insert, update, delete on
+  tenants,
+  tenant_members,
+  subscriptions,
+  staff,
+  service_categories,
+  services,
+  staff_services,
+  members,
+  staff_availability_rules,
+  staff_availability_exceptions,
+  bookings
+to service_role;
+grant usage on all sequences in schema public to service_role;
+
 -- ---------- anon (公開預約頁的消費者) ----------
 -- 只開唯讀,僅限公開資訊:
 --   services / staff / staff_services 已在 0001 寫了 public_read_* policy
