@@ -1,0 +1,19 @@
+# Cursor / Cline / any code-assistant rules
+
+請先讀 CLAUDE.md 與 docs/ 目錄三份文件:
+- CLAUDE.md         : 專案速覽 + 設計憲法
+- docs/SPEC.md      : 功能規格 + 已實作對照表
+- docs/SCHEMA.md    : DB tables / functions / RPCs 速查
+- docs/DEV.md       : 本機開發 / debug / curl
+
+動程式前必看:
+1. 不繞 RLS — 寫入走 RPC 或 authenticated tenant_isolation
+2. 不改 bookings 的 exclusion constraint (預約防重疊核心)
+3. 不改成代收代付金流 (法遵)
+4. 後台不要白底白字 / 黑底白字按鈕,用米黃 cream theme
+5. 任何 generated column 用 IMMUTABLE 函式 (ts_plus_minutes)
+6. 新表必須有 RLS + tenant_isolation + grant + policy 四件套
+
+技術棧: Nuxt 3 + Vue 3 + TypeScript + Supabase (Postgres 15 + RLS + Storage + pg_cron)
+
+不確定的事 → 先讀 docs/ 找答案,找不到再問人類。
