@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 後台 layout - Liquid Glass floating nav bar
+// 後台 layout — 米黃 cream 配色, 對齊月曆視覺
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
 const { tenant, load: loadTenant } = useMyTenant()
@@ -28,36 +28,32 @@ async function signOut() {
 
 <template>
   <div class="admin">
-    <!-- Floating glass nav -->
-    <nav class="nav">
-      <div class="nav-inner">
-        <div class="brand">後台</div>
-        <div class="links">
-          <NuxtLink to="/admin/calendar">月曆</NuxtLink>
-          <NuxtLink to="/admin">清單</NuxtLink>
-          <NuxtLink to="/admin/services">服務</NuxtLink>
-          <NuxtLink to="/admin/staff">員工</NuxtLink>
-          <NuxtLink to="/admin/members">會員</NuxtLink>
-          <NuxtLink to="/admin/billing" class="nav-billing">
-            方案 <span class="lg-pill lg-pill-accent">{{ planLabel || '—' }}</span>
-          </NuxtLink>
-          <NuxtLink to="/admin/settings">設定</NuxtLink>
-        </div>
-        <div v-if="user" class="user">
-          <span class="lg-footnote">{{ user.email }}</span>
-          <button class="lg-btn lg-btn-secondary lg-btn-sm" @click="signOut">登出</button>
-        </div>
+    <header class="topbar">
+      <div class="brand">後台</div>
+      <nav class="links">
+        <NuxtLink to="/admin/calendar" class="nav-link">月曆</NuxtLink>
+        <NuxtLink to="/admin" class="nav-link">清單</NuxtLink>
+        <NuxtLink to="/admin/services" class="nav-link">服務</NuxtLink>
+        <NuxtLink to="/admin/staff" class="nav-link">員工</NuxtLink>
+        <NuxtLink to="/admin/members" class="nav-link">會員</NuxtLink>
+        <NuxtLink to="/admin/billing" class="nav-link">
+          方案 <span v-if="planLabel" class="chip">{{ planLabel }}</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/settings" class="nav-link">設定</NuxtLink>
+      </nav>
+      <div v-if="user" class="user">
+        <span class="email">{{ user.email }}</span>
+        <button class="ghost" @click="signOut">登出</button>
       </div>
-    </nav>
+    </header>
 
-    <!-- Banners -->
     <div v-if="status?.status === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 3" class="banner warn">
       <span>⏰ 試用期剩 {{ trialDaysLeft }} 天</span>
-      <NuxtLink to="/admin/billing" class="lg-btn lg-btn-filled lg-btn-sm">立刻升級</NuxtLink>
+      <NuxtLink to="/admin/billing">立刻升級 →</NuxtLink>
     </div>
     <div v-else-if="hitLimit" class="banner danger">
-      <span>⚠️ 已達方案上限,部分功能無法新增</span>
-      <NuxtLink to="/admin/billing" class="lg-btn lg-btn-filled lg-btn-sm">升級方案</NuxtLink>
+      <span>⚠️ 已達方案上限</span>
+      <NuxtLink to="/admin/billing">升級方案 →</NuxtLink>
     </div>
 
     <main class="content">
@@ -67,77 +63,80 @@ async function signOut() {
 </template>
 
 <style scoped>
-.admin { min-height: 100vh; padding-bottom: var(--s-7); }
-
-.nav {
-  position: sticky; top: var(--s-3); z-index: 50;
-  margin: var(--s-3) auto;
-  max-width: 1240px;
-  padding: 0 var(--s-3);
+.admin {
+  background: #f3eedd;
+  min-height: 100vh;
+  padding-bottom: 3rem;
 }
-.nav-inner {
-  display: flex; align-items: center; gap: var(--s-4);
-  padding: var(--s-2) var(--s-3) var(--s-2) var(--s-4);
-  background: var(--surface-glass-strong);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  backdrop-filter: blur(40px) saturate(200%);
-  border: 0.5px solid var(--border-hairline);
-  border-radius: var(--r-pill);
-  box-shadow: var(--shadow-glass);
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; gap: 1.25rem;
+  padding: 0.85rem 1.5rem;
+  background: #fdfaf1;
+  border-bottom: 1px solid #2b2b2b;
+  flex-wrap: wrap;
 }
 .brand {
-  font-weight: 700; letter-spacing: -0.01em; font-size: var(--t-callout);
-  padding: 0 var(--s-2);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400; font-size: 1.15rem; letter-spacing: 0.04em;
+  color: #2b2b2b;
 }
 .links {
-  display: flex; gap: var(--s-1); align-items: center; flex: 1; flex-wrap: wrap;
+  display: flex; gap: 0.15rem; align-items: center; flex: 1; flex-wrap: wrap;
 }
-.links :deep(a) {
-  padding: 6px 14px;
-  border-radius: var(--r-pill);
-  color: var(--text-secondary);
-  font-size: var(--t-subhead);
-  font-weight: 500;
-  transition: background var(--duration-fast), color var(--duration-fast);
+.nav-link {
+  padding: 0.4rem 0.85rem;
+  color: #5b5b5b;
+  font-size: 0.92rem;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
   display: inline-flex; align-items: center; gap: 6px;
 }
-.links :deep(a:hover) {
-  background: rgba(120, 120, 128, 0.12);
-  color: var(--text-primary);
-  opacity: 1;
+.nav-link:hover { color: #1a1a1a; background: rgba(43, 43, 43, 0.06); }
+.nav-link.router-link-exact-active,
+.nav-link.router-link-active {
+  color: #1a1a1a; font-weight: 600;
+  background: #f5b945;
 }
-.links :deep(a.router-link-exact-active),
-.links :deep(a.router-link-active) {
-  background: var(--accent-fill);
-  color: var(--accent);
+.chip {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 8px;
+  background: #2b2b2b;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
-.user {
-  display: flex; gap: var(--s-2); align-items: center; margin-left: auto;
+.user { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+.email { font-size: 0.85rem; color: #7a7570; }
+.ghost {
+  background: transparent;
+  border: 1px solid #2b2b2b;
+  color: #2b2b2b;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
 }
+.ghost:hover { background: #2b2b2b; color: #fdfaf1; }
 
+/* Banner */
 .banner {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
-  max-width: 1240px; margin: 0 auto var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  border-radius: var(--r-card);
-  font-size: var(--t-subhead);
-  font-weight: 500;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.7rem 1.5rem;
+  border-bottom: 1px solid var(--admin-line-soft, #d9d2bc);
+  font-size: 0.9rem;
 }
-.banner.warn   { background: var(--warning-fill); color: var(--warning); }
-.banner.danger { background: var(--danger-fill);  color: var(--danger); }
+.banner.warn   { background: #fff5e6; color: #b35900; }
+.banner.danger { background: #fdecea; color: #b71c1c; }
+.banner a { font-weight: 600; }
 
-.content {
-  max-width: 1240px; margin: 0 auto;
-  padding: 0 var(--s-4) var(--s-6);
-}
+.content { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
 
 @media (max-width: 768px) {
-  .nav { margin-top: var(--s-2); }
-  .nav-inner {
-    flex-wrap: wrap;
-    padding: var(--s-2);
-    border-radius: var(--r-container);
-  }
+  .topbar { padding: 0.75rem 1rem; gap: 0.75rem; }
   .links {
     width: 100%;
     overflow-x: auto;
@@ -146,6 +145,9 @@ async function signOut() {
     scrollbar-width: none;
   }
   .links::-webkit-scrollbar { display: none; }
-  .user { width: 100%; justify-content: flex-end; }
+  .nav-link { white-space: nowrap; flex-shrink: 0; }
+  .user { margin-left: auto; }
+  .email { display: none; }
+  .content { padding: 1rem; }
 }
 </style>

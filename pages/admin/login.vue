@@ -42,29 +42,24 @@ async function submit() {
 
 <template>
   <div class="wrap">
-    <form class="lg-card card" @submit.prevent="submit">
+    <form class="card" @submit.prevent="submit">
       <header class="head">
-        <h1 class="lg-title1">{{ mode === 'signin' ? '登入' : '註冊' }}</h1>
-        <p class="lg-subhead">店家後台</p>
+        <h1>{{ mode === 'signin' ? '登入' : '註冊' }}</h1>
+        <p class="muted">店家後台</p>
       </header>
 
-      <div class="fields">
-        <label class="lg-field">
-          <span class="lg-field-label">Email</span>
-          <input v-model="email" type="email" required autocomplete="email" class="lg-input" />
-        </label>
-        <label class="lg-field">
-          <span class="lg-field-label">密碼</span>
-          <input v-model="password" type="password" required minlength="6"
-                 autocomplete="current-password" class="lg-input" />
-        </label>
-      </div>
+      <label class="field">Email
+        <input v-model="email" type="email" required autocomplete="email" />
+      </label>
+      <label class="field">密碼
+        <input v-model="password" type="password" required minlength="6" autocomplete="current-password" />
+      </label>
 
-      <button :disabled="loading" type="submit" class="lg-btn lg-btn-filled submit-btn">
+      <button :disabled="loading" type="submit" class="submit-btn">
         {{ loading ? '處理中…' : mode === 'signin' ? '登入' : '註冊' }}
       </button>
 
-      <p class="switch lg-footnote">
+      <p class="switch">
         <template v-if="mode === 'signin'">
           還沒帳號? <a href="#" @click.prevent="mode = 'signup'">註冊</a>
         </template>
@@ -73,27 +68,65 @@ async function submit() {
         </template>
       </p>
 
-      <p v-if="errMsg" class="lg-pill lg-pill-danger msg">{{ errMsg }}</p>
-      <p v-if="okMsg" class="lg-pill lg-pill-success msg">{{ okMsg }}</p>
+      <p v-if="errMsg" class="err">{{ errMsg }}</p>
+      <p v-if="okMsg" class="ok">{{ okMsg }}</p>
     </form>
   </div>
 </template>
 
 <style scoped>
 .wrap {
+  background: #f3eedd;
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
-  padding: var(--s-4);
+  padding: 1rem;
 }
 .card {
   width: 100%; max-width: 380px;
-  display: flex; flex-direction: column; gap: var(--s-4);
-  padding: var(--s-5);
+  background: #fdfaf1;
+  border: 1px solid #2b2b2b;
+  border-radius: 14px;
+  padding: 1.75rem;
+  display: flex; flex-direction: column; gap: 0.85rem;
 }
-.head { text-align: center; }
-.head h1 { margin: 0 0 4px; }
-.fields { display: flex; flex-direction: column; gap: var(--s-3); }
-.submit-btn { padding: 14px; font-size: var(--t-headline); }
-.switch { text-align: center; margin: 0; }
-.msg { align-self: flex-start; max-width: 100%; white-space: normal; }
+.head { text-align: center; margin-bottom: 0.5rem; }
+.head h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400; font-size: 1.8rem; letter-spacing: 0.03em;
+  color: #1a1a1a; margin: 0 0 0.25rem;
+}
+.muted { color: #7a7570; font-size: 0.9rem; margin: 0; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: #5b5b5b; }
+.field input {
+  background: #fff;
+  border: 1px solid #d9d2bc;
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  font: inherit; font-size: 0.95rem; color: #1a1a1a;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field input:focus { border-color: #2b2b2b; }
+.submit-btn {
+  padding: 0.75rem;
+  background: #1a1a1a; color: #fdfaf1;
+  border: 0; border-radius: 6px;
+  font-size: 1rem; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  transition: opacity 0.15s;
+}
+.submit-btn:hover:not(:disabled) { opacity: 0.85; }
+.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.switch { text-align: center; font-size: 0.85rem; color: #7a7570; margin: 0; }
+.switch a { color: #6b4900; text-decoration: underline; }
+.err {
+  background: #fdecea; color: #b71c1c;
+  padding: 0.5rem 0.75rem; border-radius: 6px;
+  font-size: 0.85rem; margin: 0;
+}
+.ok {
+  background: #e8f5e9; color: #1b5e20;
+  padding: 0.5rem 0.75rem; border-radius: 6px;
+  font-size: 0.85rem; margin: 0;
+}
 </style>

@@ -376,99 +376,107 @@ button { cursor: pointer; }
 }
 
 /* ============================================================
- * Legacy compat — 把現有 .card / .choice / .slot 等通用 class
- * 強制套用 Liquid Glass 樣式,避免每頁都得重寫。
- * scoped CSS 仍可覆蓋更細節 (顏色、邊框) 因為這裡只設定材質。
+ * 後台 (Admin) — Cream 配色, 與月曆一致, 不走 Liquid Glass
+ * 所有後台頁都被 admin layout 包住, 用 .admin .card 等 selector
+ * 蓋掉預設, 後台就能拿到一致的米黃視覺。
  * ============================================================ */
-section.card, div.card {
-  background: var(--surface-glass-strong) !important;
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
-  backdrop-filter: blur(50px) saturate(200%);
-  border: 0.5px solid var(--border-hairline) !important;
-  border-radius: var(--r-container) !important;
-  box-shadow: var(--shadow-glass) !important;
-  padding: var(--s-5) !important;
+
+.admin {
+  background: #f3eedd;
+  min-height: 100vh;
+  --admin-line: #2b2b2b;
+  --admin-cream: #f3eedd;
+  --admin-card: #fdfaf1;
+  --admin-accent: #f5b945;
+  --admin-text: #1a1a1a;
+  --admin-muted: #7a7570;
+  --admin-line-soft: #d9d2bc;
 }
 
-/* h1/h2 in scoped pages — gentler */
-.admin h1, .page > h1 {
-  font-size: var(--t-title1);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  margin: 0 0 var(--s-4);
+.admin h1, .admin h2, .admin h3 {
+  font-family: Georgia, 'Cormorant Garamond', 'Times New Roman', serif;
+  letter-spacing: 0.01em;
+  color: var(--admin-text);
+}
+.admin h1 { font-size: 1.9rem; font-weight: 400; margin: 0 0 1rem; }
+.admin h2 { font-size: 1.15rem; font-weight: 500; margin: 0 0 0.75rem; }
+.admin h3 { font-size: 1rem; font-weight: 500; margin: 0 0 0.5rem; }
+
+/* Cards (sections in admin pages) */
+.admin section.card, .admin div.card {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
-/* legacy `.muted` */
-.muted { color: var(--text-secondary) !important; }
-
-/* Generic button modernization (only naked <button>s without lg- class) */
-button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x) {
-  background: rgba(120, 120, 128, 0.16);
-  color: var(--text-primary);
+/* Naked buttons in admin — 純黑 fill, 短圓角 */
+.admin button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x) {
+  background: var(--admin-text);
+  color: #fff;
   border: 0;
-  border-radius: var(--r-pill);
-  padding: 8px 16px;
-  font-size: var(--t-subhead);
-  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
-  transition: transform var(--duration-fast) var(--ease-out),
-              background var(--duration-fast) var(--ease-out),
-              opacity var(--duration-fast) var(--ease-out);
+  transition: opacity 0.15s, transform 0.05s;
 }
-button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x):hover {
-  background: rgba(120, 120, 128, 0.24);
-}
-button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x):active {
-  transform: scale(0.96);
-}
+.admin button:hover:not(:disabled) { opacity: 0.85; }
+.admin button:active { transform: scale(0.97); }
+.admin button:disabled { opacity: 0.4; cursor: not-allowed; }
+.admin button.ghost { background: transparent; color: var(--admin-text); border: 1px solid var(--admin-line); }
+.admin button.danger { background: #c0392b; }
 
-/* Naked inputs in admin pages */
-.page input[type="text"],
-.page input[type="email"],
-.page input[type="number"],
-.page input[type="password"],
-.page input[type="search"],
-.page input[type="date"],
-.page input[type="time"],
-.page input[type="url"],
-.page textarea,
-.page select,
-.card input[type="text"],
-.card input[type="email"],
-.card input[type="number"],
-.card input[type="password"],
-.card input[type="search"],
-.card input[type="date"],
-.card input[type="time"],
-.card input[type="url"],
-.card textarea,
-.card select {
-  background: rgba(120, 120, 128, 0.12);
-  border: 0.5px solid transparent;
-  border-radius: var(--r-input);
-  padding: 10px 12px;
-  font-size: var(--t-body);
-  color: var(--text-primary);
-  transition: background var(--duration-fast), border-color var(--duration-fast);
+/* Inputs */
+.admin input[type="text"],
+.admin input[type="email"],
+.admin input[type="number"],
+.admin input[type="password"],
+.admin input[type="search"],
+.admin input[type="date"],
+.admin input[type="time"],
+.admin input[type="url"],
+.admin textarea,
+.admin select {
+  background: #fff;
+  border: 1px solid var(--admin-line-soft);
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--admin-text);
   outline: none;
+  transition: border-color 0.15s;
 }
-.page input:focus, .page textarea:focus, .page select:focus,
-.card input:focus, .card textarea:focus, .card select:focus {
-  background: rgba(120, 120, 128, 0.18);
-  border-color: var(--accent);
+.admin input:focus, .admin textarea:focus, .admin select:focus {
+  border-color: var(--admin-line);
 }
+.admin input:disabled { background: #f5f0e0; color: var(--admin-muted); }
 
-/* Naked table */
-.card table { width: 100%; border-collapse: collapse; }
-.card table th, .card table td {
-  padding: var(--s-3) var(--s-2);
-  border-bottom: 0.5px solid var(--separator);
+/* Tables */
+.admin .card table { width: 100%; border-collapse: collapse; }
+.admin .card th, .admin .card td {
+  padding: 0.55rem 0.5rem;
+  border-bottom: 1px solid var(--admin-line-soft);
   text-align: left;
 }
-.card table th {
-  font-size: var(--t-footnote);
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.admin .card th {
+  font-weight: 600; color: var(--admin-muted);
+  font-size: 0.82rem; letter-spacing: 0.03em;
 }
+
+/* legacy muted in admin */
+.admin .muted { color: var(--admin-muted); }
+.admin .small { font-size: 0.85rem; }
+
+/* Links inside admin */
+.admin a:not([class*="lg-"]):not(.nav-link) { color: #6b4900; }
+.admin a:not([class*="lg-"]):not(.nav-link):hover { color: var(--admin-text); }
+
+/* Naked badge stays as scoped CSS in pages */
