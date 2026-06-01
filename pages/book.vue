@@ -4,7 +4,7 @@
 // 所有寫入走 SECURITY DEFINER RPC,不直接寫表 (RLS 已擋)。
 definePageMeta({ layout: 'storefront' })
 
-interface Service { id: string; name: string; duration_minutes: number; price: number; deposit_amount: number | null; image_path: string | null }
+interface Service { id: string; name: string; duration_minutes: number; price: number; deposit_amount: number | null; image_path: string | null; is_addon: boolean }
 interface Staff { id: string; name: string; portfolio: string[] }
 
 const supabase = useSupabaseClient()
@@ -77,18 +77,55 @@ async function copyManageLink(url: string) {
 const services = ref<Service[]>([])
 const selectedServiceId = ref<string | null>(null)
 const selectedService = computed(() => services.value.find(s => s.id === selectedServiceId.value) ?? null)
+const mainServices = computed(() => services.value.filter(s => !s.is_addon))
+const addonServices = computed(() => services.value.filter(s => s.is_addon))
 
 async function loadServices() {
   if (!tenant.value) return
   const { data } = await supabase
     .from('services')
-    .select('id, name, duration_minutes, price, deposit_amount, image_path')
+    .select('id, name, duration_minutes, price, deposit_amount, image_path, is_addon')
     .eq('tenant_id', tenant.value.id)
     .eq('is_active', true)
     .order('name')
   services.value = (data ?? []) as Service[]
 }
 await loadServices()
+
+// ---------- step 1.5: 加購選擇 (multi) ----------
+const selectedAddonIds = ref<Set<string>>(new Set())
+function toggleAddon(id: string) {
+  if (selectedAddonIds.value.has(id)) selectedAddonIds.value.delete(id)
+  else selectedAddonIds.value.add(id)
+  selectedAddonIds.value = new Set(selectedAddonIds.value) // 觸發 reactivity
+}
+// 換主服務時清空 addons
+watch(selectedServiceId, () => { selectedAddonIds.value = new Set() })
+
+const totalDuration = computed(() => {
+  let n = selectedService.value?.duration_minutes ?? 0
+  for (const id of selectedAddonIds.value) {
+    const a = addonServices.value.find(s => s.id === id)
+    if (a) n += a.duration_minutes
+  }
+  return n
+})
+const totalPrice = computed(() => {
+  let n = selectedService.value?.price ?? 0
+  for (const id of selectedAddonIds.value) {
+    const a = addonServices.value.find(s => s.id === id)
+    if (a) n += a.price
+  }
+  return n
+})
+const totalDeposit = computed(() => {
+  let n = selectedService.value?.deposit_amount ?? 0
+  for (const id of selectedAddonIds.value) {
+    const a = addonServices.value.find(s => s.id === id)
+    if (a) n += (a.deposit_amount ?? 0)
+  }
+  return n
+})
 
 // ---------- step 2: 載入該服務可做的設計師 ----------
 const eligibleStaff = ref<Staff[]>([])
@@ -132,27 +169,27 @@ const slots = ref<string[]>([])
 const slotsLoading = ref(false)
 const selectedSlot = ref<string | null>(null)
 
-watch([selectedServiceId, selectedStaffId, selectedDate], async ([sid, stf, date]) => {
+watch([selectedServiceId, selectedStaffId, selectedDate, selectedAddonIds], async ([sid, stf, date, addons]) => {
   selectedSlot.value = null
   slots.value = []
   if (!sid || !stf || !date) return
   slotsLoading.value = true
+  const addonArr = Array.from(addons as Set<string>)
   try {
     if (stf === '__any__') {
-      // 不指定設計師 → 把所有可選設計師的時段聯集後去重
       const all = await Promise.all(
-        eligibleStaff.value.map(s => getAvailableSlots({ staffId: s.id, serviceId: sid, date })),
+        eligibleStaff.value.map(s => getAvailableSlots({ staffId: s.id, serviceId: sid as string, date: date as string, addonIds: addonArr })),
       )
       const set = new Set<string>()
       for (const arr of all) for (const t of arr) set.add(t)
       slots.value = Array.from(set).sort()
     } else {
-      slots.value = await getAvailableSlots({ staffId: stf, serviceId: sid, date })
+      slots.value = await getAvailableSlots({ staffId: stf as string, serviceId: sid as string, date: date as string, addonIds: addonArr })
     }
   } finally {
     slotsLoading.value = false
   }
-})
+}, { deep: true })
 
 function fmtSlot(iso: string) {
   // 轉成店家當地時區的 HH:mm
@@ -179,6 +216,7 @@ async function submit() {
     customerEmail: customer.email || null,
     note: customer.note || null,
     staffId: useAny ? undefined : selectedStaffId.value!,
+    addonIds: Array.from(selectedAddonIds.value),
   })
   if (result) submitted.value = result
 }
@@ -188,6 +226,7 @@ function reset() {
   selectedServiceId.value = null
   selectedStaffId.value = null
   selectedSlot.value = null
+  selectedAddonIds.value = new Set()
   customer.name = ''
   customer.phone = ''
   customer.email = ''
@@ -214,11 +253,11 @@ function reset() {
       </div>
 
       <!-- 需訂金 -->
-      <template v-if="selectedService?.deposit_amount">
+      <template v-if="totalDeposit > 0">
         <div class="payment glass-tinted">
           <div class="payment-head">
             <span class="lg-headline">訂金匯款</span>
-            <span class="lg-pill lg-pill-warning">${{ selectedService.deposit_amount }}</span>
+            <span class="lg-pill lg-pill-warning">${{ totalDeposit }}</span>
           </div>
           <p class="lg-footnote">24 小時內完成轉帳,逾時系統將自動釋放此時段。</p>
 
@@ -264,7 +303,7 @@ function reset() {
           <h2 class="lg-title3">選擇服務</h2>
         </header>
         <div class="choices">
-          <button v-for="s in services" :key="s.id"
+          <button v-for="s in mainServices" :key="s.id"
                   class="choice service-choice"
                   :class="{ active: selectedServiceId === s.id }"
                   @click="selectedServiceId = s.id">
@@ -275,6 +314,31 @@ function reset() {
               <span v-if="s.deposit_amount" class="lg-pill lg-pill-warning">需訂金 ${{ s.deposit_amount }}</span>
             </div>
           </button>
+        </div>
+      </section>
+
+      <!-- step 1.5 加購 -->
+      <section v-if="selectedServiceId && addonServices.length" class="lg-card step">
+        <header class="step-head">
+          <span class="step-num">+</span>
+          <h2 class="lg-title3">加購 <span class="lg-subhead lg-muted">(可選)</span></h2>
+        </header>
+        <div class="addons">
+          <label v-for="a in addonServices" :key="a.id" class="addon"
+                 :class="{ active: selectedAddonIds.has(a.id) }">
+            <input type="checkbox"
+                   :checked="selectedAddonIds.has(a.id)"
+                   @change="toggleAddon(a.id)" />
+            <span class="addon-info">
+              <strong class="lg-callout">{{ a.name }}</strong>
+              <span class="lg-footnote">+{{ a.duration_minutes }} 分 · +${{ a.price }}</span>
+            </span>
+          </label>
+        </div>
+        <div v-if="selectedAddonIds.size > 0" class="total">
+          <span class="lg-footnote">總計</span>
+          <strong class="lg-headline">{{ totalDuration }} 分 · ${{ totalPrice }}</strong>
+          <span v-if="totalDeposit > 0" class="lg-pill lg-pill-warning">訂金 ${{ totalDeposit }}</span>
         </div>
       </section>
 
@@ -413,6 +477,29 @@ function reset() {
 .service-meta {
   padding: var(--s-3); display: flex; flex-direction: column;
   gap: 4px; align-items: flex-start; width: 100%;
+}
+
+.addons { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s-2); }
+.addon {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-card);
+  cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+.addon:hover { background: rgba(255, 255, 255, 0.8); }
+.addon.active { background: var(--accent-fill); border-color: var(--accent); }
+.addon input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); }
+.addon-info { display: flex; flex-direction: column; gap: 2px; }
+.total {
+  display: flex; align-items: baseline; gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: var(--accent-fill);
+  border-radius: var(--r-control);
+  margin-top: var(--s-2);
+  flex-wrap: wrap;
 }
 
 .staff-thumbs { display: flex; gap: 6px; margin-top: var(--s-2); }

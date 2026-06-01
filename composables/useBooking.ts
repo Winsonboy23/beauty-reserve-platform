@@ -24,6 +24,8 @@ export interface BookingInput {
   note?: string | null
   /** 指定設計師時必填；不指定設計師時留空走 createBookingAny */
   staffId?: string
+  /** 加購服務 ID 陣列，可空 */
+  addonIds?: string[]
 }
 
 export interface CreateBookingResult {
@@ -45,6 +47,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   member_blacklisted: '預約無法建立，請直接聯絡店家確認。',
   // 店家本月預約已滿（免費方案 15 筆/月）— 對客人模糊化原因
   plan_limit_exceeded: '本月預約名額已滿，請直接聯絡店家確認。',
+  addon_invalid: '加購項目無效，請重新整理頁面。',
 }
 
 /** 從 Supabase RPC 錯誤物件解析出我們在 SQL 裡 raise 的代碼字串 */
@@ -73,6 +76,7 @@ export function useBooking() {
     /** 'YYYY-MM-DD' */
     date: string
     slotMinutes?: number
+    addonIds?: string[]
   }): Promise<string[]> {
     loading.value = true
     error.value = null
@@ -82,6 +86,7 @@ export function useBooking() {
         p_service_id: params.serviceId,
         p_date: params.date,
         p_slot_minutes: params.slotMinutes ?? 15,
+        p_addon_ids: params.addonIds ?? [],
       })
       if (rpcError) throw rpcError
       // RPC 回傳 setof timestamptz → string[]
@@ -147,6 +152,7 @@ export function useBooking() {
       p_customer_phone: input.customerPhone,
       p_customer_email: input.customerEmail ?? null,
       p_note: input.note ?? null,
+      p_addon_ids: input.addonIds ?? [],
     })
     const row = Array.isArray(data) ? data[0] : data
     return {
@@ -171,6 +177,7 @@ export function useBooking() {
       p_customer_phone: input.customerPhone,
       p_customer_email: input.customerEmail ?? null,
       p_note: input.note ?? null,
+      p_addon_ids: input.addonIds ?? [],
     })
     const row = Array.isArray(data) ? data[0] : data
     return {

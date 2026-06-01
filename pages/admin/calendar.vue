@@ -163,7 +163,14 @@ async function markPaid(b: Booking) {
   await fetchBookings()
 }
 async function setStatus(b: Booking, status: Booking['status']) {
-  const { error: e } = await supabase.from('bookings').update({ status }).eq('id', b.id)
+  const patch: any = { status }
+  if (status === 'completed') {
+    const input = prompt(`「${b.member?.name ?? '客人'}」實收金額 ($) ?`, '')
+    if (input === null) return
+    const amt = parseFloat(input)
+    if (!isNaN(amt) && amt >= 0) patch.actual_amount = amt
+  }
+  const { error: e } = await supabase.from('bookings').update(patch).eq('id', b.id)
   if (e) error.value = e.message
   await fetchBookings()
 }
