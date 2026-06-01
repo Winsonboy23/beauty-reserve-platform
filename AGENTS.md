@@ -4,11 +4,12 @@
 
 ## TL;DR
 
-讀這幾份就懂這專案:
-1. [CLAUDE.md](./CLAUDE.md) — 一頁速覽 + 設計憲法
-2. [docs/SPEC.md](./docs/SPEC.md) — 功能規格 + 已實作對照
-3. [docs/SCHEMA.md](./docs/SCHEMA.md) — DB schema + RPC 速查
-4. [docs/DEV.md](./docs/DEV.md) — 本機開發 + debug + 常用 curl
+讀順序:
+1. **[STATUS.md](./STATUS.md)** ← 第一個讀,此刻狀態 + 待辦 + 未跑的 migration
+2. [CLAUDE.md](./CLAUDE.md) — 設計憲法 + 不可違反規則
+3. [docs/SPEC.md](./docs/SPEC.md) — 功能規格 + 已實作對照
+4. [docs/SCHEMA.md](./docs/SCHEMA.md) — DB schema + RPC 速查
+5. [docs/DEV.md](./docs/DEV.md) — 本機開發 + debug + 常用 curl
 
 ## 你能改什麼,不能改什麼
 

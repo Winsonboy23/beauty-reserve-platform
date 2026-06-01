@@ -1,6 +1,7 @@
 # Cursor / Cline / any code-assistant rules
 
-請先讀 CLAUDE.md 與 docs/ 目錄三份文件:
+讀順序:
+- STATUS.md         : ⚠️ 第一個讀,此刻狀態 / 待辦 / 未跑的 migration
 - CLAUDE.md         : 專案速覽 + 設計憲法
 - docs/SPEC.md      : 功能規格 + 已實作對照表
 - docs/SCHEMA.md    : DB tables / functions / RPCs 速查

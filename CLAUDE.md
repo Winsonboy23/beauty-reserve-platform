@@ -2,6 +2,9 @@
 
 > 給未來任何 AI 助理 (Claude / Cursor / Copilot) 看的「快速上手」文件。
 > 真實人類請看 [README.md](./README.md)。
+>
+> ⚠️ **任何新對話開頭請先讀 [STATUS.md](./STATUS.md)** — 那裡有此刻待辦 / 已完成 / 未跑的 migration。
+> 本檔講設計原則,不講進度。
 
 ## 1. 一句話
 
