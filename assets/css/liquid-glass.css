@@ -450,15 +450,8 @@ button { cursor: pointer; }
   opacity: 1;
 }
 
-/* Inputs */
-.admin input[type="text"],
-.admin input[type="email"],
-.admin input[type="number"],
-.admin input[type="password"],
-.admin input[type="search"],
-.admin input[type="date"],
-.admin input[type="time"],
-.admin input[type="url"],
+/* Inputs — 用寬鬆 selector,只排除非文字輸入類型 */
+.admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
 .admin textarea,
 .admin select {
   background: #fff;
@@ -467,14 +460,16 @@ button { cursor: pointer; }
   padding: 0.55rem 0.7rem;
   font-size: 0.95rem;
   font-family: inherit;
-  color: var(--admin-text);
+  color: var(--admin-text) !important;
   outline: none;
   transition: border-color 0.15s;
 }
-.admin input:focus, .admin textarea:focus, .admin select:focus {
+.admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.admin textarea:focus, .admin select:focus {
   border-color: var(--admin-line);
 }
-.admin input:disabled { background: #f5f0e0; color: var(--admin-muted); }
+.admin input:disabled { background: #f5f0e0; color: var(--admin-muted) !important; }
+.admin input::placeholder, .admin textarea::placeholder { color: var(--admin-muted); }
 
 /* Tables */
 .admin .card table { width: 100%; border-collapse: collapse; }
