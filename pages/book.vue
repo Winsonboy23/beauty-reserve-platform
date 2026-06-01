@@ -43,16 +43,18 @@ if (!tenantBase.value) {
 }
 
 // Lazy-load bank info (0004 可能還沒跑,失敗就靜默)
-;(async () => {
+async function loadBankInfo() {
   if (!tenantBase.value) return
-  const { data } = await supabase
-    .from('tenants')
-    .select('bank_name, bank_account_no, bank_account_holder, bank_transfer_note')
-    .eq('id', tenantBase.value.id)
-    .maybeSingle()
-    .throwOnError() as any
-  if (data) bankInfo.value = data
-})().catch(() => { /* 0004 沒跑,沒事,訂金那塊就顯示「請聯絡店家」 */ })
+  try {
+    const { data, error: e } = await supabase
+      .from('tenants')
+      .select('bank_name, bank_account_no, bank_account_holder, bank_transfer_note')
+      .eq('id', tenantBase.value.id)
+      .maybeSingle()
+    if (!e && data) bankInfo.value = data as any
+  } catch {}
+}
+loadBankInfo()
 
 // 短編號 (給客人轉帳備註用): 取 UUID 前 6 碼大寫,易於人類識讀
 function shortRef(id: string) { return id.slice(0, 6).toUpperCase() }

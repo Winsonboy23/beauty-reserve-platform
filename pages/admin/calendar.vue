@@ -171,228 +171,268 @@ async function setStatus(b: Booking, status: Booking['status']) {
 
 <template>
   <div class="page">
-    <!-- Top header -->
-    <header class="cal-header glass-strong">
-      <button class="lg-btn lg-btn-secondary lg-btn-sm nav-btn" @click="prevMonth">‹</button>
-      <div class="month-info">
-        <span class="lg-title2">{{ MONTH_NAMES[viewMonth - 1] }}</span>
-        <span class="lg-subhead lg-muted">{{ viewYear }}</span>
-      </div>
-      <button class="lg-btn lg-btn-secondary lg-btn-sm nav-btn" @click="nextMonth">›</button>
-    </header>
+    <div class="cal-frame">
+      <button class="nav prev" @click="prevMonth" aria-label="上個月">‹</button>
 
-    <!-- Grid -->
-    <div class="grid-wrap lg-card">
-      <div class="weekdays">
-        <div v-for="w in WEEK_LABELS" :key="w" class="weekday">{{ w }}</div>
+      <div class="cal-content">
+        <div class="month-label">{{ MONTH_NAMES[viewMonth - 1] }}<br><span class="year">{{ viewYear }}</span></div>
+
+        <div class="grid-wrap">
+          <div class="weekdays">
+            <div v-for="w in WEEK_LABELS" :key="w" class="weekday">{{ w }}</div>
+          </div>
+
+          <div class="grid">
+            <button v-for="c in cells" :key="c.ymd"
+                    class="cell"
+                    :class="{
+                      out: !c.isCurrentMonth,
+                      today: c.isToday,
+                      has: dayPrimary(c.ymd) && c.isCurrentMonth,
+                      selected: selectedYMD === c.ymd,
+                    }"
+                    @click="selectedYMD = c.ymd">
+              <span class="day-num">{{ c.dayNumber }}</span>
+              <template v-if="dayPrimary(c.ymd)">
+                <span class="ev-title">{{ dayPrimary(c.ymd)!.title }}</span>
+                <span class="ev-time">{{ dayPrimary(c.ymd)!.time }}</span>
+                <span v-if="dayPrimary(c.ymd)!.more > 0" class="ev-more">+{{ dayPrimary(c.ymd)!.more }}</span>
+              </template>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div class="grid">
-        <button v-for="c in cells" :key="c.ymd"
-                class="cell"
-                :class="{
-                  out: !c.isCurrentMonth,
-                  today: c.isToday,
-                  has: dayPrimary(c.ymd) && c.isCurrentMonth,
-                  selected: selectedYMD === c.ymd,
-                }"
-                @click="selectedYMD = c.ymd">
-          <span class="day-num">{{ c.dayNumber }}</span>
-          <template v-if="dayPrimary(c.ymd)">
-            <span class="ev-title">{{ dayPrimary(c.ymd)!.title }}</span>
-            <span class="ev-time">{{ dayPrimary(c.ymd)!.time }}</span>
-            <span v-if="dayPrimary(c.ymd)!.more > 0" class="ev-more">+{{ dayPrimary(c.ymd)!.more }}</span>
-          </template>
-        </button>
-      </div>
+      <button class="nav next" @click="nextMonth" aria-label="下個月">›</button>
     </div>
 
     <!-- 該日清單 -->
-    <section class="day-detail lg-card" v-if="selectedYMD">
-      <header class="detail-head">
-        <h2 class="lg-title3">{{ selectedYMD }}</h2>
-        <span class="lg-pill">{{ selectedBookings.length }} 筆</span>
-      </header>
-      <p v-if="loading" class="lg-muted">載入中…</p>
-      <p v-else-if="!selectedBookings.length" class="lg-muted">當日沒有預約。</p>
-      <ul v-else class="booking-list">
-        <li v-for="b in selectedBookings" :key="b.id" class="booking-row" :class="['st-' + b.status]">
-          <div class="time-col">
-            <strong class="lg-headline">{{ fmtTime(b.start_at) }}</strong>
-            <span class="lg-caption lg-muted">–{{ fmtTime(b.end_at) }}</span>
-          </div>
-          <div class="main-col">
-            <div class="line1">
-              <strong>{{ b.member?.name ?? '—' }}</strong>
-              <span class="lg-footnote lg-muted">{{ b.member?.phone }}</span>
-            </div>
-            <div class="line2">
-              <span class="lg-subhead">{{ b.service?.name ?? '—' }}</span>
-              <span class="lg-caption lg-muted">· {{ b.duration_minutes }}m · {{ b.staff?.name ?? '—' }}</span>
-            </div>
-            <div class="line3">
-              <span :class="['lg-pill', 'b-' + b.status]">{{ statusLabel(b.status) }}</span>
-              <span :class="['lg-pill', 'd-' + b.deposit_status]">{{ depositLabel(b.deposit_status) }}</span>
-            </div>
-          </div>
-          <div class="actions">
-            <button v-if="b.deposit_status === 'pending'" class="lg-btn lg-btn-filled lg-btn-sm" @click="markPaid(b)">標訂金已付</button>
-            <button v-if="['pending','confirmed'].includes(b.status)" class="lg-btn lg-btn-secondary lg-btn-sm" @click="setStatus(b, 'completed')">完成</button>
-            <button v-if="b.status !== 'cancelled'" class="lg-btn lg-btn-danger lg-btn-sm" @click="setStatus(b, 'cancelled')">取消</button>
-            <button v-if="['pending','confirmed'].includes(b.status)" class="lg-btn lg-btn-secondary lg-btn-sm" @click="setStatus(b, 'no_show')">爽約</button>
-          </div>
-        </li>
-      </ul>
+    <section class="day-detail" v-if="selectedYMD">
+      <h2>{{ selectedYMD }} <span class="muted">({{ selectedBookings.length }} 筆)</span></h2>
+      <p v-if="loading" class="muted">載入中…</p>
+      <p v-else-if="!selectedBookings.length" class="muted">當日沒有預約。</p>
+      <table v-else>
+        <thead>
+          <tr><th>時間</th><th>客人</th><th>服務</th><th>設計師</th><th>狀態</th><th>訂金</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="b in selectedBookings" :key="b.id" :class="['st-' + b.status]">
+            <td><strong>{{ fmtTime(b.start_at) }}</strong> <span class="muted small">–{{ fmtTime(b.end_at) }}</span></td>
+            <td>{{ b.member?.name ?? '—' }}<br><span class="muted small">{{ b.member?.phone }}</span></td>
+            <td>{{ b.service?.name ?? '—' }} <span class="muted small">({{ b.duration_minutes }}m)</span></td>
+            <td>{{ b.staff?.name ?? '—' }}</td>
+            <td><span :class="['badge','b-' + b.status]">{{ statusLabel(b.status) }}</span></td>
+            <td><span :class="['badge','d-' + b.deposit_status]">{{ depositLabel(b.deposit_status) }}</span></td>
+            <td class="actions">
+              <button v-if="b.deposit_status === 'pending'" @click="markPaid(b)">標訂金已付</button>
+              <button v-if="['pending','confirmed'].includes(b.status)" class="ghost" @click="setStatus(b, 'completed')">完成</button>
+              <button v-if="b.status !== 'cancelled'" class="ghost danger" @click="setStatus(b, 'cancelled')">取消</button>
+              <button v-if="['pending','confirmed'].includes(b.status)" class="ghost" @click="setStatus(b, 'no_show')">爽約</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </section>
 
-    <p v-if="error" class="lg-pill lg-pill-danger">{{ error }}</p>
+    <p v-if="error" class="err">{{ error }}</p>
   </div>
 </template>
 
 <style scoped>
+/* 月曆獨立保留 cream / 米黃 spec, 不走 Liquid Glass — 比照原本設計 */
+
 .page {
-  display: flex; flex-direction: column; gap: var(--s-3);
+  background: #f3eedd;
+  padding: 2rem 1rem;
+  margin: -1.5rem;
+  min-height: calc(100vh - 60px);
 }
 
-/* ── Header (sticky pill) ── */
-.cal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: var(--s-2) var(--s-3);
-  border-radius: var(--r-pill);
+.cal-frame {
+  display: flex; align-items: center; gap: 0.5rem;
+  max-width: 1100px; margin: 0 auto;
 }
-.nav-btn {
-  width: 36px; height: 36px; padding: 0;
-  border-radius: 50%;
-  font-size: 22px; font-weight: 600;
-  line-height: 1;
+.nav {
+  background: transparent !important; border: 0 !important; cursor: pointer;
+  font-size: 3rem; line-height: 1; color: #2b2b2b;
+  width: 3rem; padding: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  border-radius: 0 !important;
 }
-.month-info { display: flex; align-items: baseline; gap: var(--s-2); }
-.month-info .lg-title2 { letter-spacing: -0.02em; }
+.nav:hover { color: #000; background: transparent !important; }
 
-/* ── Grid card ── */
-.grid-wrap {
-  display: flex; flex-direction: column; gap: var(--s-2);
-  padding: var(--s-3);
+.cal-content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1rem;
 }
-.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+
+.month-label {
+  font-family: Georgia, 'Cormorant Garamond', 'Times New Roman', serif;
+  font-size: 2.5rem;
+  letter-spacing: 0.04em;
+  color: #2b2b2b;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+  font-weight: 300;
+  line-height: 1.1;
+}
+.month-label .year {
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  color: #555;
+}
+
+.grid-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+.weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;
+}
 .weekday {
   text-align: center;
-  font-size: var(--t-caption); font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--text-tertiary);
-  padding: 6px 0;
-  text-transform: uppercase;
+  font-size: 0.78rem; color: #5b5b5b;
+  letter-spacing: 0.06em;
+  padding: 0.3rem 0;
 }
-.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
 
-/* ── Day cell ── */
 .cell {
-  background: rgba(255, 255, 255, 0.5);
-  border: 0.5px solid var(--border-hairline);
-  border-radius: var(--r-control);
-  padding: 8px 10px;
-  cursor: pointer; text-align: left; font: inherit;
-  display: flex; flex-direction: column; gap: 2px;
+  background: #fdfaf1 !important;
+  border: 1px solid #2b2b2b !important;
+  border-radius: 14px !important;
+  padding: 0.55rem 0.7rem !important;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  display: flex; flex-direction: column;
+  gap: 0.1rem;
   position: relative;
   aspect-ratio: 1 / 1;
-  transition: transform var(--duration-fast) var(--ease-out),
-              background var(--duration-fast) var(--ease-out);
-  color: var(--text-primary);
+  transition: transform 0.06s;
+  color: #1a1a1a;
 }
-.cell:hover { background: rgba(255, 255, 255, 0.8); }
-.cell:active { transform: scale(0.96); }
+.cell:hover { transform: translateY(-1px); background: #fdfaf1 !important; }
 
-.cell.out { opacity: 0.32; }
-
-.cell.today {
-  box-shadow: inset 0 0 0 2px var(--accent);
+.cell.out {
+  opacity: 0.35;
+  border-color: #6b6b6b !important;
+  background: #f7f2e3 !important;
 }
-.cell.today .day-num { color: var(--accent); font-weight: 700; }
-
+.cell.today { box-shadow: inset 0 0 0 2px #444; }
 .cell.has {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
+  background: #f5b945 !important;
+  border-color: #1f1f1f !important;
 }
-.cell.has .day-num,
-.cell.has .ev-title,
-.cell.has .ev-time { color: white; }
-
-.cell.selected {
-  box-shadow: inset 0 0 0 2px var(--text-primary);
-}
-.cell.has.selected {
-  box-shadow: inset 0 0 0 2px white;
-}
+.cell.selected { box-shadow: inset 0 0 0 2px #000; }
 
 .day-num {
-  font-size: var(--t-subhead);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  letter-spacing: 0.02em;
 }
 .ev-title {
-  font-size: var(--t-caption2); font-weight: 500;
-  margin-top: 2px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.78rem;
+  color: #1a1a1a;
+  margin-top: 0.15rem;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ev-time {
-  font-size: var(--t-caption2);
-  opacity: 0.8;
+  font-size: 0.72rem;
+  color: #1a1a1a;
+  line-height: 1.1;
 }
 .ev-more {
-  position: absolute; bottom: 6px; right: 8px;
-  font-size: 10px; font-weight: 600;
-  padding: 1px 6px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.32);
-  color: inherit;
+  position: absolute; bottom: 0.35rem; right: 0.55rem;
+  font-size: 0.66rem; color: #1a1a1a;
+  background: rgba(0,0,0,0.08); padding: 0.05rem 0.3rem; border-radius: 8px;
 }
 
-/* ── Day detail card ── */
-.day-detail { display: flex; flex-direction: column; gap: var(--s-3); }
-.detail-head { display: flex; align-items: center; gap: var(--s-2); }
-.detail-head h2 { margin: 0; }
-
-.booking-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--s-2); }
-.booking-row {
-  display: grid;
-  grid-template-columns: 70px 1fr auto;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  background: rgba(255, 255, 255, 0.5);
-  border: 0.5px solid var(--border-hairline);
-  border-radius: var(--r-card);
-  align-items: center;
+.day-detail {
+  max-width: 1100px; margin: 2rem auto 0;
+  background: #fff !important;
+  padding: 1.25rem 1.5rem !important;
+  border-radius: 12px !important;
+  border: 1px solid #e5dfcc !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
 }
-.time-col { display: flex; flex-direction: column; }
-.main-col { display: flex; flex-direction: column; gap: 2px; }
-.line1 { display: flex; gap: var(--s-2); align-items: baseline; }
-.line2 { display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; }
-.line3 { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
-.actions { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.day-detail h2 { margin: 0 0 0.75rem; font-size: 1.1rem; font-family: Georgia, serif; }
+.muted { color: #888 !important; }
+.small { font-size: 0.82rem; }
 
-.b-pending   { background: var(--warning-fill); color: var(--warning); }
-.b-confirmed { background: var(--accent-fill); color: var(--accent); }
-.b-completed { background: var(--success-fill); color: var(--success); }
-.b-cancelled { background: rgba(120,120,128,0.16); color: var(--text-secondary); }
-.b-no_show   { background: var(--danger-fill); color: var(--danger); }
-.d-paid    { background: var(--success-fill); color: var(--success); }
-.d-pending { background: var(--warning-fill); color: var(--warning); }
-.d-none    { background: rgba(120,120,128,0.16); color: var(--text-secondary); }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { text-align: left; padding: 0.55rem 0.5rem; border-bottom: 1px solid #f1f1f1; vertical-align: top; }
+th { font-weight: 600; color: #555; font-size: 0.82rem; }
+.badge { display: inline-block; font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 4px; background: #eee; }
+.b-pending   { background: #fff5e6; color: #b35900; }
+.b-confirmed { background: #e3f2fd; color: #0d47a1; }
+.b-completed { background: #e8f5e9; color: #1b5e20; }
+.b-no_show   { background: #fce4ec; color: #880e4f; }
+.d-paid    { background: #e8f5e9; color: #1b5e20; }
+.d-pending { background: #fff5e6; color: #b35900; }
+.d-none    { background: #f5f5f5; color: #777; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 
-.booking-row.st-cancelled { opacity: 0.6; }
+.day-detail .actions button {
+  padding: 0.35rem 0.65rem !important;
+  border: 0;
+  border-radius: 4px !important;
+  background: #1a1a1a !important;
+  color: #fff !important;
+  cursor: pointer;
+  font-size: 0.82rem !important;
+}
+.day-detail .actions button.ghost { background: #f4f4f4 !important; color: #1a1a1a !important; }
+.day-detail .actions button.danger { color: #c0392b !important; }
+.err { color: #c0392b; max-width: 1100px; margin: 1rem auto; }
 
 @media (max-width: 768px) {
-  .booking-row { grid-template-columns: 1fr; }
-  .actions { justify-content: flex-start; }
-
-  .cell { padding: 4px 6px; border-radius: 8px; }
-  .ev-title, .ev-time { display: none; }
-  .day-num { font-size: var(--t-caption); }
-  .ev-more { bottom: 3px; right: 4px; font-size: 9px; padding: 0 4px; }
-  .cell.has::after {
-    content: ''; position: absolute; bottom: 4px; left: 4px;
-    width: 5px; height: 5px; border-radius: 50%; background: white;
+  .page { padding: 1rem 0.5rem; margin: -1.5rem; }
+  .cal-frame { gap: 0.2rem; }
+  .nav { font-size: 2rem; width: 1.8rem; }
+  .cal-content { grid-template-columns: 1fr; gap: 0.5rem; }
+  .month-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 1.4rem;
+    text-align: center;
+    padding: 0;
   }
+  .month-label .year { font-size: 0.85rem; margin-left: 0.5rem; }
+  .grid { gap: 0.3rem; }
+  .weekday { font-size: 0.65rem; padding: 0.15rem 0; }
+  .cell { padding: 0.35rem 0.4rem !important; border-radius: 10px !important; }
+  .ev-title, .ev-time { display: none; }
+  .ev-more { bottom: 0.25rem; right: 0.3rem; font-size: 0.6rem; padding: 0 0.3rem; }
+  .day-num { font-size: 0.78rem; }
+  .cell.has::after {
+    content: ''; position: absolute;
+    bottom: 0.35rem; left: 0.35rem;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #1a1a1a;
+  }
+  .day-detail table thead { display: none; }
+  .day-detail table, .day-detail tbody, .day-detail tr, .day-detail td {
+    display: block; width: 100%;
+  }
+  .day-detail tr {
+    border: 1px solid #eee; border-radius: 8px;
+    padding: 0.6rem 0.7rem; margin-bottom: 0.6rem;
+    background: #fff;
+  }
+  .day-detail td { border: 0; padding: 0.2rem 0; }
+  .day-detail td:first-child { font-size: 1.05rem; padding-bottom: 0.3rem; }
+  .actions { padding-top: 0.4rem; }
 }
 </style>
