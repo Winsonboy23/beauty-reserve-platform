@@ -391,6 +391,23 @@ button { cursor: pointer; }
   --admin-text: #1a1a1a;
   --admin-muted: #7a7570;
   --admin-line-soft: #d9d2bc;
+  /* 重點: 強制 admin 區的 text color, 不繼承 body (dark mode 會變白) */
+  color: var(--admin-text) !important;
+  color-scheme: light;
+}
+
+/* 所有後台子元素都用 admin-text, 防 dark mode 把 inherit 變白 */
+.admin *:not(button):not(a):not(input):not(textarea):not(select):not(.lg-pill):not(.chip):not(.badge):not([class*="b-"]):not([class*="d-"]):not(.ev-title):not(.ev-time):not(.day-num):not(.ev-more) {
+  color: inherit;
+}
+.admin h1, .admin h2, .admin h3, .admin h4, .admin h5, .admin h6,
+.admin p, .admin span, .admin label, .admin th, .admin td, .admin dt, .admin dd,
+.admin li, .admin strong, .admin code {
+  color: var(--admin-text);
+}
+.admin .muted, .admin .lg-muted, .admin .lg-footnote,
+.admin th, .admin .field-label, .admin .lg-field-label {
+  color: var(--admin-muted) !important;
 }
 
 .admin h1, .admin h2, .admin h3 {
