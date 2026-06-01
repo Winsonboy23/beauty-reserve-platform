@@ -8,6 +8,7 @@ interface Service { id: string; name: string; duration_minutes: number; price: n
 interface Staff { id: string; name: string; portfolio: string[] }
 
 const supabase = useSupabaseClient()
+const user = useSupabaseUser()
 const tenantBase = useState<{
   id: string; name: string; slug: string; timezone: string
 } | null>('tenant')
@@ -311,6 +312,13 @@ function reset() {
                   class="lg-btn lg-btn-filled">前往管理頁</NuxtLink>
       </div>
 
+      <!-- 引導註冊 (沒登入時才顯示) -->
+      <div v-if="!user" class="signup-hint glass-tinted">
+        <span class="lg-callout">下次想免填資料?</span>
+        <NuxtLink :to="`/login?redirect=/my`" class="lg-btn lg-btn-filled lg-btn-sm">建立會員</NuxtLink>
+      </div>
+      <NuxtLink v-else to="/my" class="lg-btn lg-btn-secondary lg-btn-sm signup-hint">→ 查看我的預約</NuxtLink>
+
       <button class="lg-btn lg-btn-secondary reset-btn" @click="reset">再約一次</button>
     </section>
 
@@ -595,6 +603,13 @@ function reset() {
 }
 
 .reset-btn { align-self: center; }
+.signup-hint {
+  display: flex; align-items: center; gap: var(--s-2); justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-card);
+  margin: var(--s-3) 0;
+  text-decoration: none;
+}
 
 code { background: rgba(120, 120, 128, 0.12); padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
 code.ref {
