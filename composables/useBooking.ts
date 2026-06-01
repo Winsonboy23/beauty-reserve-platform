@@ -43,6 +43,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   service_not_found: '找不到此服務，請重新整理頁面後再試。',
   // 故意不洩漏「黑名單」字眼，讓客人去問店家，不傷顏面也不引爆爭執
   member_blacklisted: '預約無法建立，請直接聯絡店家確認。',
+  // 店家本月預約已滿（免費方案 15 筆/月）— 對客人模糊化原因
+  plan_limit_exceeded: '本月預約名額已滿，請直接聯絡店家確認。',
 }
 
 /** 從 Supabase RPC 錯誤物件解析出我們在 SQL 裡 raise 的代碼字串 */

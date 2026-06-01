@@ -4,7 +4,10 @@ definePageMeta({ middleware: 'auth', layout: 'admin' })
 
 const supabase = useSupabaseClient()
 const { tenant, load: loadTenant } = useMyTenant()
+const { status: planStatus, load: loadPlan, usage: planUsage } = usePlanStatus()
 await loadTenant()
+if (tenant.value) await loadPlan(tenant.value.id)
+const canAddStaff = computed(() => !planUsage('staff').full)
 
 interface Staff {
   id: string
@@ -34,6 +37,7 @@ const newName = ref('')
 const creating = ref(false)
 async function create() {
   if (!tenant.value || !newName.value.trim()) return
+  if (!canAddStaff.value) { error.value = '已達目前方案的員工上限,請升級方案'; return }
   creating.value = true
   error.value = null
   const { error: e } = await supabase
@@ -61,10 +65,17 @@ async function toggleActive(s: Staff) {
     <p v-if="!tenant" class="muted">尚未綁定店家。</p>
 
     <section v-if="tenant" class="card">
-      <h2>新增員工</h2>
+      <h2>新增員工
+        <span v-if="planStatus" class="muted">
+          ({{ planUsage('staff').used }} / {{ planUsage('staff').limit < 0 ? '無限' : planUsage('staff').limit }})
+        </span>
+      </h2>
+      <p v-if="!canAddStaff" class="warn-text">
+        已達目前方案上限 — <NuxtLink to="/admin/billing">升級方案</NuxtLink> 才能再加員工。
+      </p>
       <form class="form-row" @submit.prevent="create">
         <label>姓名<input v-model="newName" required placeholder="如:Amy" /></label>
-        <button :disabled="creating" type="submit">{{ creating ? '建立中…' : '新增' }}</button>
+        <button :disabled="creating || !canAddStaff" type="submit">{{ creating ? '建立中…' : '新增' }}</button>
       </form>
     </section>
 
@@ -110,4 +121,6 @@ th { font-weight: 600; color: #555; }
 tr.inactive td { color: #aaa; }
 tr.inactive a { color: #aaa; }
 .err { color: #c0392b; font-size: 0.9rem; }
+.warn-text { color: #b35900; font-size: 0.88rem; padding: 0.4rem 0.7rem; background: #fff5e6; border-radius: 4px; margin: 0 0 0.7rem; }
+.warn-text a { color: #b35900; font-weight: 600; }
 </style>

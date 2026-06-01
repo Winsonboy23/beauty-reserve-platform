@@ -6,7 +6,11 @@ definePageMeta({ middleware: 'auth', layout: 'admin' })
 const supabase = useSupabaseClient()
 const { tenant, load: loadTenant } = useMyTenant()
 const { publicUrl, upload, remove, buildExt } = usePortfolio()
+const { status: planStatus, load: loadPlan, usage: planUsage } = usePlanStatus()
 await loadTenant()
+if (tenant.value) await loadPlan(tenant.value.id)
+
+const canAddService = computed(() => !planUsage('services').full)
 
 interface Service {
   id: string
@@ -49,6 +53,10 @@ const creating = ref(false)
 async function create() {
   if (!tenant.value) return
   if (!form.name.trim()) { error.value = '請填服務名稱'; return }
+  if (!canAddService.value) {
+    error.value = '已達目前方案的服務上限,請升級方案'
+    return
+  }
   creating.value = true
   error.value = null
   const { error: e } = await supabase.from('services').insert({
@@ -142,13 +150,20 @@ async function deleteImage(s: Service) {
     <p v-if="!tenant" class="muted">尚未綁定店家。</p>
 
     <section v-if="tenant" class="card">
-      <h2>新增服務</h2>
+      <h2>新增服務
+        <span v-if="planStatus" class="muted small">
+          ({{ planUsage('services').used }} / {{ planUsage('services').limit < 0 ? '無限' : planUsage('services').limit }})
+        </span>
+      </h2>
+      <p v-if="!canAddService" class="warn-text">
+        已達目前方案上限 — <NuxtLink to="/admin/billing">升級方案</NuxtLink> 才能再加服務。
+      </p>
       <form class="form-row" @submit.prevent="create">
         <label>名稱<input v-model="form.name" required placeholder="如:剪髮" /></label>
         <label>時長(分)<input v-model.number="form.duration_minutes" type="number" min="5" step="5" required /></label>
         <label>價格<input v-model.number="form.price" type="number" min="0" step="50" required /></label>
         <label>訂金(可空)<input v-model.number="form.deposit_amount" type="number" min="0" step="50" placeholder="不收訂金留空" /></label>
-        <button :disabled="creating" type="submit">{{ creating ? '建立中…' : '新增' }}</button>
+        <button :disabled="creating || !canAddService" type="submit">{{ creating ? '建立中…' : '新增' }}</button>
       </form>
     </section>
 
@@ -239,4 +254,6 @@ tr.inactive td { color: #aaa; }
   width: 18px; height: 18px; line-height: 14px; padding: 0;
   border-radius: 50%; background: #c0392b; color: #fff; font-size: 0.8rem;
 }
+.warn-text { color: #b35900; font-size: 0.88rem; padding: 0.4rem 0.7rem; background: #fff5e6; border-radius: 4px; margin: 0 0 0.7rem; }
+.warn-text a { color: #b35900; font-weight: 600; }
 </style>
