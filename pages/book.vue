@@ -220,7 +220,7 @@ async function submit() {
   })
   if (result) {
     submitted.value = result
-    // Fire-and-forget 通知; 失敗不影響預約已建立
+    // Fire-and-forget 通知 (email + LINE 並行); 失敗不影響預約已建立
     if (customer.email) {
       $fetch('/api/notify/booking-created', {
         method: 'POST',
@@ -230,11 +230,13 @@ async function submit() {
           customerEmail: customer.email,
           customerName: customer.name,
         },
-      }).catch((err) => {
-        // 通知失敗只 log,不彈窗
-        console.warn('email notify failed', err)
-      })
+      }).catch((err) => console.warn('email notify failed', err))
     }
+    // LINE: server route 自己判斷有沒有綁 user_id; 沒綁就 skip
+    $fetch('/api/notify/booking-line', {
+      method: 'POST',
+      body: { bookingId: result.bookingId },
+    }).catch((err) => console.warn('line notify failed', err))
   }
 }
 

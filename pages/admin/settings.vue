@@ -102,6 +102,55 @@ async function copyUrl() {
     setTimeout(() => { copied.value = false }, 1500)
   } catch {}
 }
+
+// ---------- LINE 設定 ----------
+const lineForm = reactive({
+  channel_id: '',
+  access_token: '',
+})
+const lineStatus = ref<{ has_channel: boolean; has_token: boolean; channel_id: string | null; msgs_used_this_month: number } | null>(null)
+const lineSaving = ref(false)
+const lineMsg = ref<string | null>(null)
+
+async function loadLineStatus() {
+  if (!tenant.value) return
+  const { data, error: e } = await supabase.rpc('tenant_line_settings_status', { p_tenant_id: tenant.value.id })
+  if (!e) {
+    const row = Array.isArray(data) ? data[0] : data
+    lineStatus.value = row ?? null
+    if (row?.channel_id) lineForm.channel_id = row.channel_id
+  }
+}
+await loadLineStatus()
+
+async function saveLine() {
+  if (!tenant.value) return
+  lineSaving.value = true
+  lineMsg.value = null
+  const { error: e } = await supabase.rpc('tenant_line_settings_set', {
+    p_tenant_id: tenant.value.id,
+    p_channel_id: lineForm.channel_id,
+    p_access_token: lineForm.access_token,
+  })
+  lineSaving.value = false
+  if (e) lineMsg.value = e.message
+  else {
+    lineMsg.value = '已儲存'
+    lineForm.access_token = '' // 不在前端保留 token
+    await loadLineStatus()
+  }
+}
+
+async function clearLine() {
+  if (!confirm('確定移除 LINE 設定?')) return
+  if (!tenant.value) return
+  await supabase.rpc('tenant_line_settings_set', {
+    p_tenant_id: tenant.value.id, p_channel_id: '', p_access_token: '',
+  })
+  lineForm.channel_id = ''
+  lineForm.access_token = ''
+  await loadLineStatus()
+}
 </script>
 
 <template>
@@ -151,6 +200,40 @@ async function copyUrl() {
       </label>
     </section>
 
+    <section v-if="tenant" class="card">
+      <h2>LINE OA 通知</h2>
+      <p class="muted small">
+        到 <a href="https://developers.line.biz/" target="_blank" rel="noopener">LINE Developers</a> →
+        Provider → Messaging API channel → 拿 Channel access token (long-lived) 貼進來。
+        客人加你的 OA 為好友後,在會員資料貼上他的 LINE user ID 就能推播。
+      </p>
+
+      <div v-if="lineStatus" class="status">
+        <span :class="['lg-pill', lineStatus.has_token ? 'ok' : 'warn']">
+          {{ lineStatus.has_token ? '✓ 已設定' : '✗ 未設定' }}
+        </span>
+        <span v-if="lineStatus.has_token" class="muted small">
+          本月已用 {{ lineStatus.msgs_used_this_month }} 則
+        </span>
+      </div>
+
+      <div class="grid">
+        <label class="field">Channel ID
+          <input v-model="lineForm.channel_id" placeholder="例:1234567890" />
+        </label>
+        <label class="field">Channel Access Token (long-lived)
+          <input v-model="lineForm.access_token" type="password"
+                 :placeholder="lineStatus?.has_token ? '已設定,留空維持原值' : '貼入 token'" />
+        </label>
+      </div>
+
+      <div class="actions-inline">
+        <button :disabled="lineSaving" @click="saveLine">{{ lineSaving ? '儲存中…' : '儲存 LINE 設定' }}</button>
+        <button v-if="lineStatus?.has_token" class="ghost" @click="clearLine">移除</button>
+        <span v-if="lineMsg" class="muted small">{{ lineMsg }}</span>
+      </div>
+    </section>
+
     <div class="actions" v-if="tenant">
       <button :disabled="saving" @click="save">{{ saving ? '儲存中…' : '儲存設定' }}</button>
       <span v-if="okMsg" class="ok">{{ okMsg }}</span>
@@ -178,4 +261,10 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 .url-preview code { background: #fff; padding: 0.2rem 0.4rem; border-radius: 3px; }
 .copy-btn { padding: 0.3rem 0.7rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.82rem; }
+.status { display: flex; gap: 0.75rem; align-items: center; margin: 0.5rem 0; }
+.lg-pill { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.lg-pill.ok   { background: #e8f5e9; color: #1b5e20; }
+.lg-pill.warn { background: #fff5e6; color: #b35900; }
+.actions-inline { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+.actions-inline .ghost { background: transparent; }
 </style>

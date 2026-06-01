@@ -14,7 +14,9 @@ const error = ref<string | null>(null)
 
 interface Member {
   id: string; name: string; phone: string; email: string | null
-  note: string | null; tags: string[]; is_blacklisted: boolean; created_at: string
+  note: string | null; tags: string[]; is_blacklisted: boolean
+  line_user_id: string | null
+  created_at: string
 }
 interface Booking {
   id: string; start_at: string; duration_minutes: number; status: string
@@ -24,7 +26,7 @@ interface Booking {
 }
 
 const member = ref<Member | null>(null)
-const form = reactive<Partial<Member>>({ name: '', email: '', note: '', tags: [] })
+const form = reactive<Partial<Member>>({ name: '', email: '', note: '', tags: [], line_user_id: '' })
 const newTag = ref('')
 const saving = ref(false)
 const savedOk = ref(false)
@@ -34,7 +36,7 @@ const bookings = ref<Booking[]>([])
 async function loadMember() {
   const { data, error: e } = await supabase
     .from('members')
-    .select('id, name, phone, email, note, tags, is_blacklisted, created_at')
+    .select('id, name, phone, email, note, tags, is_blacklisted, line_user_id, created_at')
     .eq('id', memberId).maybeSingle()
   if (e) { error.value = e.message; return }
   member.value = data
@@ -43,6 +45,7 @@ async function loadMember() {
     form.email = data.email ?? ''
     form.note = data.note ?? ''
     form.tags = [...(data.tags ?? [])]
+    form.line_user_id = data.line_user_id ?? ''
   }
 }
 
@@ -112,6 +115,7 @@ async function save() {
     email: form.email?.trim() || null,
     note: form.note?.trim() || null,
     tags: form.tags ?? [],
+    line_user_id: form.line_user_id?.trim() || null,
   }).eq('id', memberId)
   saving.value = false
   if (e) error.value = e.message
@@ -186,6 +190,11 @@ function statusLabel(s: string) {
                  class="tag-input" @keydown.enter.prevent="addTag" />
         </div>
       </div>
+
+      <label class="field">LINE user ID
+        <span class="muted small">從 LINE Official Account Manager → 聊天 → 該客人對話 → 右側資訊 複製 user id</span>
+        <input v-model="form.line_user_id" placeholder="如 Uxxxxxx... (沒綁就留空)" />
+      </label>
 
       <div class="actions">
         <button :disabled="saving" @click="save">{{ saving ? '儲存中…' : '儲存' }}</button>
