@@ -26,6 +26,8 @@ export interface BookingInput {
   staffId?: string
   /** 加購服務 ID 陣列，可空 */
   addonIds?: string[]
+  /** 優惠碼，可空 */
+  couponCode?: string
 }
 
 export interface CreateBookingResult {
@@ -48,6 +50,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   // 店家本月預約已滿（免費方案 15 筆/月）— 對客人模糊化原因
   plan_limit_exceeded: '本月預約名額已滿，請直接聯絡店家確認。',
   addon_invalid: '加購項目無效，請重新整理頁面。',
+  coupon_invalid: '優惠碼無效或已過期。',
+  coupon_min_amount: '此優惠碼未達最低消費門檻。',
+  coupon_max_uses: '此優惠碼已用罄。',
+  coupon_member_limit: '你已使用過此優惠碼。',
 }
 
 /** 從 Supabase RPC 錯誤物件解析出我們在 SQL 裡 raise 的代碼字串 */
@@ -153,6 +159,7 @@ export function useBooking() {
       p_customer_email: input.customerEmail ?? null,
       p_note: input.note ?? null,
       p_addon_ids: input.addonIds ?? [],
+      p_coupon_code: input.couponCode ?? null,
     })
     const row = Array.isArray(data) ? data[0] : data
     return {
@@ -178,6 +185,7 @@ export function useBooking() {
       p_customer_email: input.customerEmail ?? null,
       p_note: input.note ?? null,
       p_addon_ids: input.addonIds ?? [],
+      p_coupon_code: input.couponCode ?? null,
     })
     const row = Array.isArray(data) ? data[0] : data
     return {

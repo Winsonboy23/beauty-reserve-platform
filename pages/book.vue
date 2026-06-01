@@ -128,6 +128,51 @@ const totalDeposit = computed(() => {
   return n
 })
 
+// ---------- 優惠碼 ----------
+const couponCode = ref('')
+const couponState = ref<
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'valid'; amount_off: number; final_amount: number; coupon_name: string }
+  | { state: 'invalid'; reason: string }
+>({ state: 'idle' })
+
+async function validateCoupon() {
+  if (!tenantBase.value) return
+  const code = couponCode.value.trim()
+  if (!code) { couponState.value = { state: 'idle' }; return }
+  couponState.value = { state: 'checking' }
+  const { data, error: e } = await supabase.rpc('validate_coupon', {
+    p_tenant_id: tenantBase.value.id,
+    p_code: code,
+    p_amount: totalPrice.value,
+    p_member_phone: customer.phone || null,
+  })
+  if (e) { couponState.value = { state: 'invalid', reason: e.message }; return }
+  const row = Array.isArray(data) ? data[0] : data
+  if (row?.valid) {
+    couponState.value = {
+      state: 'valid',
+      amount_off: Number(row.amount_off),
+      final_amount: Number(row.final_amount),
+      coupon_name: row.coupon_name,
+    }
+  } else {
+    const msg = ({
+      empty_code: '請輸入優惠碼',
+      not_found: '找不到此優惠碼',
+      min_amount_not_met: '未達最低消費門檻',
+      max_uses_reached: '此優惠碼已用罄',
+      member_limit_reached: '你已使用過此優惠碼',
+    } as any)[row?.reason ?? ''] ?? '無效'
+    couponState.value = { state: 'invalid', reason: msg }
+  }
+}
+// 換主服務或加購 → 重新驗證
+watch([selectedServiceId, selectedAddonIds], () => {
+  if (couponState.value.state === 'valid') validateCoupon()
+}, { deep: true })
+
 // ---------- step 2: 載入該服務可做的設計師 ----------
 const eligibleStaff = ref<Staff[]>([])
 // null = 還沒選; '__any__' = 不指定; 否則 staff.id
@@ -218,6 +263,7 @@ async function submit() {
     note: customer.note || null,
     staffId: useAny ? undefined : selectedStaffId.value!,
     addonIds: Array.from(selectedAddonIds.value),
+    couponCode: couponState.value.state === 'valid' ? couponCode.value.trim() : undefined,
   })
   if (result) {
     submitted.value = result
@@ -441,6 +487,23 @@ function reset() {
             <textarea v-model="customer.note" rows="2" placeholder="特殊需求,可空白" class="lg-textarea" />
           </label>
 
+          <!-- 優惠碼 -->
+          <label class="lg-field">
+            <span class="lg-field-label">優惠碼 (可空)</span>
+            <div class="coupon-row">
+              <input v-model="couponCode" placeholder="如:WELCOME100"
+                     class="lg-input" @blur="validateCoupon" />
+              <button type="button" class="lg-btn lg-btn-secondary lg-btn-sm" @click="validateCoupon">套用</button>
+            </div>
+            <span v-if="couponState.state === 'checking'" class="lg-footnote lg-muted">驗證中…</span>
+            <span v-else-if="couponState.state === 'valid'" class="lg-pill lg-pill-success coupon-msg">
+              {{ couponState.coupon_name }} · 折抵 ${{ couponState.amount_off }} → 總計 ${{ couponState.final_amount }}
+            </span>
+            <span v-else-if="couponState.state === 'invalid'" class="lg-pill lg-pill-danger coupon-msg">
+              {{ couponState.reason }}
+            </span>
+          </label>
+
           <p v-if="bkError" class="lg-pill lg-pill-danger err-pill">{{ bkError }}</p>
 
           <button :disabled="bkLoading" type="submit" class="lg-btn lg-btn-filled submit-btn">
@@ -610,6 +673,9 @@ function reset() {
   margin: var(--s-3) 0;
   text-decoration: none;
 }
+.coupon-row { display: flex; gap: var(--s-2); }
+.coupon-row input { flex: 1; }
+.coupon-msg { margin-top: 4px; align-self: flex-start; white-space: normal; }
 
 code { background: rgba(120, 120, 128, 0.12); padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
 code.ref {

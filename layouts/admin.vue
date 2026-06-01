@@ -36,6 +36,7 @@ async function signOut() {
         <NuxtLink to="/admin/services" class="nav-link">服務</NuxtLink>
         <NuxtLink to="/admin/staff" class="nav-link">員工</NuxtLink>
         <NuxtLink to="/admin/members" class="nav-link">會員</NuxtLink>
+        <NuxtLink to="/admin/coupons" class="nav-link">優惠券</NuxtLink>
         <NuxtLink to="/admin/reports" class="nav-link">報表</NuxtLink>
         <NuxtLink to="/admin/billing" class="nav-link">
           方案 <span v-if="planLabel" class="chip">{{ planLabel }}</span>

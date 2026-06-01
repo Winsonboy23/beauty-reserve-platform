@@ -1,6 +1,6 @@
 # STATUS — 開新對話必讀
 
-> 最後更新: 2026-06-01 (commit `e10cdb7`)
+> 最後更新: 2026-06-02
 > 任何 AI / 接手工程師: **先讀這份**,再讀 [CLAUDE.md](./CLAUDE.md) / [docs/](./docs/)
 
 ---
@@ -8,7 +8,7 @@
 ## 🚦 當前狀態
 
 **部署階段**: 本機開發中,還沒上線。  
-**最新 migration**: `0014_line_oa.sql`  
+**最新 migration**: `0016_coupons.sql`  
 **Git remote**: https://github.com/Winsonboy23/beauty-reserve-platform (main 分支)  
 **Demo URL**: 本機 `http://demo-shop.lvh.me:3000`
 
@@ -19,8 +19,9 @@
 ### 1. 跑沒跑的 migration
 
 ```
-0013_notification_log.sql           ← 業主已跑 ✅
-0014_line_oa.sql                    ← 待跑 (LINE OA 整合)
+0014_line_oa.sql                    ← 業主已跑 ✅
+0015_customer_accounts.sql          ← 業主已跑 ✅ (客人登入)
+0016_coupons.sql                    ← 待跑 (優惠券)
 ```
 
 到 Supabase Dashboard → SQL Editor 貼 → Run。**任何 AI 動 LINE 通知功能前要先確認 0014 已套用** (用 service_role curl `notify_booking_payload` RPC 試試,有回資料就代表 0014 跑了)。
@@ -56,6 +57,8 @@
 ### Phase 2 — 通知 (新加)
 - Email 整合 (Resend) — server route + 模板 + idempotent log (0013)
 - LINE OA 整合 — push API + tenant token + member 綁定 (0014)
+- 客人端會員系統 — /login + /my + RLS + JWT 改期 / 取消 (0015)
+- 優惠券 / 折扣碼 — /admin/coupons + /book 即時驗證 (0016)
 
 ### UI / 設計
 - 後台米黃 cream 配色 (對齊月曆視覺)
@@ -73,18 +76,16 @@
 
 ### 下一個準備做 (next)
 
-**客人端會員登入 + 我的預約歷史**
-- 客人用 LINE / email 登入,可看自己的歷史預約
-- 把 `auth.users` ↔ `members` 用 phone 或 line_user_id 綁起來
-- 新增 `/my` 頁面: 預約歷史、改期、取消、會員資料
+**集點卡 / 點數系統**
+- 完成預約累積點數 (1 元 1 點 或 自訂比率)
+- 達門檻可兌換折扣或免費服務
+- /my 顯示「我的點數」+ 兌換歷史
 - 規模: 中大 (3-4 輪對話)
 
 ### 排隊中
 
 | 項目 | 規模 | 備註 |
 |------|------|------|
-| 優惠券 / 折扣碼 | 中 | 業績工具 |
-| 集點卡 / 點數 | 中大 | Phase 3 |
 | Resend API key 接好真實寄送驗證 | 小 | 業主自己設定 |
 | LINE OA 申請接好真實推播驗證 | 小 | 業主自己設定 |
 | 部署到 Zeabur + 真實 domain | 中 | 上線前必做 |
