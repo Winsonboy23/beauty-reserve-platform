@@ -5,6 +5,7 @@ definePageMeta({ middleware: 'auth', layout: 'admin' })
 
 const supabase = useSupabaseClient()
 const { tenant, load: loadTenant } = useMyTenant()
+const { publicUrl, upload, remove, buildExt } = usePortfolio()
 await loadTenant()
 
 interface Service {
@@ -14,6 +15,7 @@ interface Service {
   price: number
   deposit_amount: number | null
   is_active: boolean
+  image_path: string | null
   created_at: string
 }
 
@@ -27,7 +29,7 @@ async function fetchAll() {
   error.value = null
   const { data, error: e } = await supabase
     .from('services')
-    .select('id, name, duration_minutes, price, deposit_amount, is_active, created_at')
+    .select('id, name, duration_minutes, price, deposit_amount, is_active, image_path, created_at')
     .order('created_at', { ascending: false })
   if (e) error.value = e.message
   else services.value = data as Service[]
@@ -100,6 +102,38 @@ async function toggleActive(s: Service) {
   if (e) { error.value = e.message; return }
   await fetchAll()
 }
+
+// ---------- 上傳代表圖 ----------
+async function pickImage(s: Service, ev: Event) {
+  const file = (ev.target as HTMLInputElement).files?.[0]
+  ;(ev.target as HTMLInputElement).value = ''  // 重置讓同檔案可再選
+  if (!file || !tenant.value) return
+  if (file.size > 5 * 1024 * 1024) { error.value = '檔案大於 5MB'; return }
+
+  const ext = buildExt(file)
+  const path = `${tenant.value.id}/services/${s.id}/main.${ext}`
+
+  // 先刪掉舊圖路徑 (副檔名可能不同) 再上傳新圖, 避免殘留
+  if (s.image_path && s.image_path !== path) await remove(s.image_path)
+
+  const up = await upload(path, file, { upsert: true })
+  if (up.error) { error.value = up.error; return }
+
+  const { error: e } = await supabase.from('services')
+    .update({ image_path: path }).eq('id', s.id)
+  if (e) { error.value = e.message; return }
+  await fetchAll()
+}
+
+async function deleteImage(s: Service) {
+  if (!s.image_path) return
+  if (!confirm('刪除這張代表圖?')) return
+  await remove(s.image_path)
+  const { error: e } = await supabase.from('services')
+    .update({ image_path: null }).eq('id', s.id)
+  if (e) error.value = e.message
+  await fetchAll()
+}
 </script>
 
 <template>
@@ -125,11 +159,19 @@ async function toggleActive(s: Service) {
       <table v-else>
         <thead>
           <tr>
-            <th>名稱</th><th>時長</th><th>價格</th><th>訂金</th><th>狀態</th><th></th>
+            <th>圖</th><th>名稱</th><th>時長</th><th>價格</th><th>訂金</th><th>狀態</th><th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="s in services" :key="s.id" :class="{ inactive: !s.is_active }">
+            <td class="thumb-cell">
+              <label class="thumb">
+                <img v-if="s.image_path" :src="publicUrl(s.image_path)!" :alt="s.name" />
+                <span v-else class="thumb-empty">+</span>
+                <input type="file" accept="image/*" @change="pickImage(s, $event)" />
+              </label>
+              <button v-if="s.image_path" class="thumb-x" @click="deleteImage(s)" title="刪圖">×</button>
+            </td>
             <template v-if="editingId === s.id">
               <td><input v-model="editForm.name" /></td>
               <td><input v-model.number="editForm.duration_minutes" type="number" min="5" step="5" /></td>
@@ -183,4 +225,18 @@ td input { padding: 0.3rem 0.45rem; border: 1px solid #ddd; border-radius: 3px; 
 .toggle { display: inline-flex; gap: 0.3rem; align-items: center; font-size: 0.85rem; }
 tr.inactive td { color: #aaa; }
 .err { color: #c0392b; font-size: 0.9rem; }
+.thumb-cell { position: relative; width: 60px; }
+.thumb {
+  display: block; width: 50px; height: 50px; border-radius: 6px; overflow: hidden;
+  border: 1px dashed #ccc; cursor: pointer; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-empty { color: #aaa; font-size: 1.5rem; }
+.thumb input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.thumb-x {
+  position: absolute; top: -6px; right: -6px;
+  width: 18px; height: 18px; line-height: 14px; padding: 0;
+  border-radius: 50%; background: #c0392b; color: #fff; font-size: 0.8rem;
+}
 </style>

@@ -10,6 +10,7 @@ definePageMeta({ middleware: 'auth', layout: 'admin' })
 const route = useRoute()
 const supabase = useSupabaseClient()
 const { tenant, load: loadTenant } = useMyTenant()
+const { publicUrl, upload, remove, buildExt, randomName } = usePortfolio()
 await loadTenant()
 
 const staffId = route.params.id as string
@@ -150,8 +151,62 @@ async function deleteException(id: string) {
   await loadExceptions()
 }
 
+// ---------- 作品集 ----------
+interface PortfolioItem {
+  id: string
+  storage_path: string
+  caption: string | null
+  sort_order: number
+}
+const portfolio = ref<PortfolioItem[]>([])
+const uploading = ref(false)
+
+async function loadPortfolio() {
+  const { data, error: e } = await supabase
+    .from('staff_portfolio')
+    .select('id, storage_path, caption, sort_order')
+    .eq('staff_id', staffId)
+    .order('sort_order')
+    .order('created_at', { ascending: false })
+  if (e) { error.value = e.message; return }
+  portfolio.value = data as PortfolioItem[]
+}
+
+async function uploadPortfolio(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  if (!files.length || !tenant.value) return
+  uploading.value = true
+  error.value = null
+  for (const file of files) {
+    if (file.size > 5 * 1024 * 1024) { error.value = `${file.name} 超過 5MB,略過`; continue }
+    const ext = buildExt(file)
+    const path = `${tenant.value.id}/staff/${staffId}/${randomName()}.${ext}`
+    const up = await upload(path, file)
+    if (up.error) { error.value = up.error; continue }
+    await supabase.from('staff_portfolio').insert({
+      tenant_id: tenant.value.id, staff_id: staffId, storage_path: path,
+      sort_order: portfolio.value.length,
+    })
+  }
+  uploading.value = false
+  await loadPortfolio()
+}
+
+async function deletePortfolio(item: PortfolioItem) {
+  if (!confirm('刪除這張照片?')) return
+  await remove(item.storage_path)
+  await supabase.from('staff_portfolio').delete().eq('id', item.id)
+  await loadPortfolio()
+}
+
+async function saveCaption(item: PortfolioItem) {
+  await supabase.from('staff_portfolio').update({ caption: item.caption }).eq('id', item.id)
+}
+
 // ---------- 初始載入 ----------
-await Promise.all([loadStaff(), loadServices(), loadRules(), loadExceptions()])
+await Promise.all([loadStaff(), loadServices(), loadRules(), loadExceptions(), loadPortfolio()])
 </script>
 
 <template>
@@ -215,6 +270,24 @@ await Promise.all([loadStaff(), loadServices(), loadRules(), loadExceptions()])
       </form>
     </section>
 
+    <!-- 作品集 -->
+    <section class="card">
+      <h2>作品集 <span class="muted">({{ portfolio.length }} 張)</span></h2>
+      <label class="upload-btn">
+        {{ uploading ? '上傳中…' : '+ 上傳照片 (可多選, 單檔 5MB 內)' }}
+        <input type="file" accept="image/*" multiple :disabled="uploading" @change="uploadPortfolio" />
+      </label>
+      <div v-if="portfolio.length" class="portfolio-grid">
+        <div v-for="p in portfolio" :key="p.id" class="portfolio-item">
+          <img :src="publicUrl(p.storage_path)!" :alt="p.caption ?? ''" />
+          <button class="del-x" @click="deletePortfolio(p)" title="刪除">×</button>
+          <input v-model="p.caption" placeholder="說明 (可空)" class="caption"
+                 @blur="saveCaption(p)" @keydown.enter="(($event.target as HTMLInputElement).blur())" />
+        </div>
+      </div>
+      <p v-else class="muted small">還沒有作品。</p>
+    </section>
+
     <!-- 例外日 -->
     <section class="card">
       <h2>例外日 (請假 / 加開)</h2>
@@ -274,4 +347,29 @@ th, td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid #f1
 .service-chk { display: inline-flex; gap: 0.4rem; align-items: center; padding: 0.4rem 0.7rem; background: #f7f7f7; border-radius: 16px; font-size: 0.9rem; }
 .tag { font-size: 0.7rem; background: #eee; color: #888; padding: 0.05rem 0.4rem; border-radius: 8px; margin-left: 0.3rem; }
 .err { color: #c0392b; font-size: 0.9rem; }
+
+.upload-btn {
+  display: inline-block; padding: 0.55rem 1rem; background: #1a1a1a; color: #fff;
+  border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-bottom: 0.7rem;
+}
+.upload-btn input { display: none; }
+.portfolio-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.7rem;
+  margin-top: 0.5rem;
+}
+.portfolio-item {
+  position: relative; background: #fafafa; border-radius: 6px; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.portfolio-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+.portfolio-item .del-x {
+  position: absolute; top: 6px; right: 6px;
+  width: 24px; height: 24px; line-height: 20px; padding: 0;
+  border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; font-size: 1rem;
+  border: 0; cursor: pointer;
+}
+.portfolio-item .caption {
+  border: 0; border-top: 1px solid #eee; padding: 0.4rem 0.55rem; font-size: 0.8rem;
+  width: 100%; background: #fff;
+}
 </style>

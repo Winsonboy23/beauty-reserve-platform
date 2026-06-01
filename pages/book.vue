@@ -4,8 +4,8 @@
 // 所有寫入走 SECURITY DEFINER RPC,不直接寫表 (RLS 已擋)。
 definePageMeta({ layout: 'storefront' })
 
-interface Service { id: string; name: string; duration_minutes: number; price: number; deposit_amount: number | null }
-interface Staff { id: string; name: string }
+interface Service { id: string; name: string; duration_minutes: number; price: number; deposit_amount: number | null; image_path: string | null }
+interface Staff { id: string; name: string; portfolio: string[] }
 
 const supabase = useSupabaseClient()
 const tenant = useState<{
@@ -14,6 +14,7 @@ const tenant = useState<{
   bank_account_holder?: string | null; bank_transfer_note?: string | null
 } | null>('tenant')
 const { getAvailableSlots, createBooking, loading: bkLoading, error: bkError } = useBooking()
+const { publicUrl } = usePortfolio()
 
 // 短編號 (給客人轉帳備註用): 取 UUID 前 6 碼大寫,易於人類識讀
 function shortRef(id: string) { return id.slice(0, 6).toUpperCase() }
@@ -41,7 +42,7 @@ async function loadServices() {
   if (!tenant.value) return
   const { data } = await supabase
     .from('services')
-    .select('id, name, duration_minutes, price, deposit_amount')
+    .select('id, name, duration_minutes, price, deposit_amount, image_path')
     .eq('tenant_id', tenant.value.id)
     .eq('is_active', true)
     .order('name')
@@ -66,7 +67,22 @@ watch(selectedServiceId, async (sid) => {
   const list = (data ?? [])
     .map((r: any) => r.staff)
     .filter((s: any) => s && s.is_active && s.tenant_id === tenant.value!.id)
-  eligibleStaff.value = list as Staff[]
+
+  // 拉每位設計師的前 3 張作品縮圖
+  if (list.length) {
+    const { data: pf } = await supabase
+      .from('staff_portfolio')
+      .select('staff_id, storage_path, sort_order')
+      .in('staff_id', list.map((s: any) => s.id))
+      .order('sort_order')
+    const byStaff = new Map<string, string[]>()
+    for (const row of (pf ?? []) as any[]) {
+      const arr = byStaff.get(row.staff_id) ?? []
+      if (arr.length < 3) arr.push(row.storage_path)
+      byStaff.set(row.staff_id, arr)
+    }
+    eligibleStaff.value = list.map((s: any) => ({ id: s.id, name: s.name, portfolio: byStaff.get(s.id) ?? [] }))
+  }
 })
 
 // ---------- step 3: 日期 → 取可用時段 ----------
@@ -204,12 +220,15 @@ function reset() {
         <h2>1. 選擇服務</h2>
         <div class="choices">
           <button v-for="s in services" :key="s.id"
-                  class="choice"
+                  class="choice service-choice"
                   :class="{ active: selectedServiceId === s.id }"
                   @click="selectedServiceId = s.id">
-            <strong>{{ s.name }}</strong>
-            <span class="muted">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
-            <span v-if="s.deposit_amount" class="tag">需訂金 ${{ s.deposit_amount }}</span>
+            <img v-if="s.image_path" :src="publicUrl(s.image_path)!" :alt="s.name" class="service-img" />
+            <div class="service-meta">
+              <strong>{{ s.name }}</strong>
+              <span class="muted">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
+              <span v-if="s.deposit_amount" class="tag">需訂金 ${{ s.deposit_amount }}</span>
+            </div>
           </button>
         </div>
       </section>
@@ -226,10 +245,13 @@ function reset() {
             <span class="muted">由系統指派最快有空的</span>
           </button>
           <button v-for="s in eligibleStaff" :key="s.id"
-                  class="choice"
+                  class="choice staff-choice"
                   :class="{ active: selectedStaffId === s.id }"
                   @click="selectedStaffId = s.id">
             <strong>{{ s.name }}</strong>
+            <div v-if="s.portfolio.length" class="staff-thumbs">
+              <img v-for="(p, i) in s.portfolio" :key="i" :src="publicUrl(p)!" :alt="s.name + ' 作品'" />
+            </div>
           </button>
         </div>
       </section>
@@ -287,6 +309,11 @@ function reset() {
   background: #fff; cursor: pointer; text-align: left; font: inherit;
 }
 .choice.active { border-color: #1a1a1a; box-shadow: 0 0 0 2px #1a1a1a inset; }
+.service-choice { padding: 0; overflow: hidden; }
+.service-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+.service-meta { padding: 0.7rem 0.85rem; display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start; }
+.staff-thumbs { display: flex; gap: 0.3rem; margin-top: 0.5rem; }
+.staff-thumbs img { width: 38px; height: 38px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
 .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 0.7rem; }
 .slot { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font: inherit; }
 .slot.active { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
