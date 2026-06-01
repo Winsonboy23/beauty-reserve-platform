@@ -15,6 +15,7 @@ interface Member {
   email: string | null
   note: string | null
   tags: string[]
+  is_blacklisted: boolean
   created_at: string
 }
 interface BookingStat {
@@ -35,7 +36,7 @@ async function fetchAll() {
   error.value = null
   const [m, b] = await Promise.all([
     supabase.from('members')
-      .select('id, name, phone, email, note, tags, created_at')
+      .select('id, name, phone, email, note, tags, is_blacklisted, created_at')
       .order('created_at', { ascending: false }),
     supabase.from('bookings')
       .select('member_id, start_at, status')
@@ -102,9 +103,10 @@ function fmtDate(iso: string | null) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="m in filtered" :key="m.id">
+          <tr v-for="m in filtered" :key="m.id" :class="{ blacklisted: m.is_blacklisted }">
             <td>
               <NuxtLink :to="`/admin/members/${m.id}`">{{ m.name }}</NuxtLink>
+              <span v-if="m.is_blacklisted" class="badge-bl">黑名單</span>
             </td>
             <td>{{ m.phone }}</td>
             <td>
@@ -138,6 +140,8 @@ th, td { text-align: left; padding: 0.55rem 0.5rem; border-bottom: 1px solid #f1
 th { font-weight: 600; color: #555; font-size: 0.82rem; }
 .tag { display: inline-block; background: #eef3ff; color: #1a47a8; padding: 0.05rem 0.45rem; border-radius: 8px; font-size: 0.75rem; margin-right: 0.25rem; }
 .warn { color: #c0392b; font-weight: 600; }
+.badge-bl { display: inline-block; background: #c0392b; color: #fff; font-size: 0.7rem; padding: 0.05rem 0.4rem; border-radius: 8px; margin-left: 0.4rem; }
+tr.blacklisted { background: #fef5f5; }
 .btn { padding: 0.4rem 0.7rem; border-radius: 4px; background: #f4f4f4; color: #1a1a1a; text-decoration: none; font-size: 0.85rem; }
 .err { color: #c0392b; }
 </style>

@@ -14,7 +14,7 @@ const error = ref<string | null>(null)
 
 interface Member {
   id: string; name: string; phone: string; email: string | null
-  note: string | null; tags: string[]; created_at: string
+  note: string | null; tags: string[]; is_blacklisted: boolean; created_at: string
 }
 interface Booking {
   id: string; start_at: string; duration_minutes: number; status: string
@@ -34,7 +34,7 @@ const bookings = ref<Booking[]>([])
 async function loadMember() {
   const { data, error: e } = await supabase
     .from('members')
-    .select('id, name, phone, email, note, tags, created_at')
+    .select('id, name, phone, email, note, tags, is_blacklisted, created_at')
     .eq('id', memberId).maybeSingle()
   if (e) { error.value = e.message; return }
   member.value = data
@@ -44,6 +44,16 @@ async function loadMember() {
     form.note = data.note ?? ''
     form.tags = [...(data.tags ?? [])]
   }
+}
+
+async function toggleBlacklist() {
+  if (!member.value) return
+  const next = !member.value.is_blacklisted
+  if (next && !confirm(`確定將 ${member.value.name} 列入黑名單?之後此電話將無法預約。`)) return
+  const { error: e } = await supabase
+    .from('members').update({ is_blacklisted: next }).eq('id', memberId)
+  if (e) { error.value = e.message; return }
+  await loadMember()
 }
 
 async function loadBookings() {
@@ -126,15 +136,28 @@ function statusLabel(s: string) {
   <div>
     <p><NuxtLink to="/admin/members">← 回會員列表</NuxtLink></p>
 
-    <h1 v-if="member">{{ member.name }}</h1>
+    <h1 v-if="member">
+      {{ member.name }}
+      <span v-if="member.is_blacklisted" class="badge-bl">黑名單</span>
+    </h1>
     <p v-else class="muted">載入中…</p>
 
     <!-- 統計 -->
     <section v-if="member" class="card stats">
       <div><span class="muted">總預約</span><strong>{{ stats.total }}</strong></div>
       <div><span class="muted">已完成</span><strong>{{ stats.completed }}</strong></div>
-      <div><span class="muted">爽約</span><strong :class="{ warn: stats.noShow > 0 }">{{ stats.noShow }}</strong></div>
+      <div>
+        <span class="muted">爽約</span>
+        <strong :class="{ warn: stats.noShow > 0 }">{{ stats.noShow }}</strong>
+        <span v-if="stats.noShow >= 3 && !member.is_blacklisted" class="hint">建議列黑名單</span>
+      </div>
       <div><span class="muted">已完成消費</span><strong>${{ stats.lifetimeValue }}</strong></div>
+      <div class="bl-action">
+        <button
+          :class="member.is_blacklisted ? 'ghost' : 'danger'"
+          @click="toggleBlacklist"
+        >{{ member.is_blacklisted ? '移出黑名單' : '列入黑名單' }}</button>
+      </div>
     </section>
 
     <!-- 編輯 -->
@@ -216,9 +239,13 @@ function statusLabel(s: string) {
 .err { color: #c0392b; font-size: 0.9rem; }
 .card { background: #fff; padding: 1rem 1.25rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 1rem; }
 .card h2 { font-size: 1rem; margin: 0 0 0.75rem; }
-.stats { display: flex; gap: 2rem; }
-.stats div { display: flex; flex-direction: column; gap: 0.2rem; }
+.stats { display: flex; gap: 2rem; align-items: flex-end; flex-wrap: wrap; }
+.stats > div { display: flex; flex-direction: column; gap: 0.2rem; }
 .stats strong { font-size: 1.4rem; }
+.bl-action { margin-left: auto; }
+.hint { font-size: 0.72rem; color: #c0392b; }
+.badge-bl { display: inline-block; background: #c0392b; color: #fff; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 8px; margin-left: 0.5rem; vertical-align: middle; }
+button.danger { background: #c0392b; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.7rem; }
 .field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; margin-top: 0.7rem; }
 .field input, .field textarea { padding: 0.45rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; font: inherit; }
