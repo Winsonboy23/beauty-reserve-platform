@@ -18,6 +18,7 @@ async function signOut() {
         <NuxtLink to="/admin">日曆</NuxtLink>
         <NuxtLink to="/admin/services">服務</NuxtLink>
         <NuxtLink to="/admin/staff">員工</NuxtLink>
+        <NuxtLink to="/admin/members">會員</NuxtLink>
         <NuxtLink to="/admin/settings">設定</NuxtLink>
         <span v-if="user" class="user">{{ user.email }} <button @click="signOut">登出</button></span>
       </nav>
