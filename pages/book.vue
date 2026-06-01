@@ -18,6 +18,20 @@ const { getAvailableSlots, createBooking, loading: bkLoading, error: bkError } =
 // 短編號 (給客人轉帳備註用): 取 UUID 前 6 碼大寫,易於人類識讀
 function shortRef(id: string) { return id.slice(0, 6).toUpperCase() }
 
+function manageUrl(bookingId: string, token: string) {
+  if (process.server) return `/manage/${bookingId}?t=${token}`
+  return `${location.origin}/manage/${bookingId}?t=${token}`
+}
+
+const copied = ref(false)
+async function copyManageLink(url: string) {
+  try {
+    await navigator.clipboard.writeText(url)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 1500)
+  } catch {}
+}
+
 // ---------- step 1: 載入服務 ----------
 const services = ref<Service[]>([])
 const selectedServiceId = ref<string | null>(null)
@@ -163,8 +177,23 @@ function reset() {
 
       <!-- 不需訂金 -->
       <p v-else class="muted">
-        本服務無須訂金,請準時到店即可。如需取消,請聯絡店家。
+        本服務無須訂金,請準時到店即可。
       </p>
+
+      <!-- 自助管理連結 -->
+      <div class="manage">
+        <h3>📅 管理你的預約</h3>
+        <p class="muted small">收藏此連結,可隨時改期或取消(不需登入):</p>
+        <div class="manage-link">
+          <code>{{ manageUrl(submitted.bookingId, submitted.manageToken) }}</code>
+          <button class="copy" @click="copyManageLink(manageUrl(submitted.bookingId, submitted.manageToken))">
+            {{ copied ? '已複製 ✓' : '複製' }}
+          </button>
+        </div>
+        <p>
+          <NuxtLink :to="`/manage/${submitted.bookingId}?t=${submitted.manageToken}`">→ 直接前往管理頁</NuxtLink>
+        </p>
+      </div>
 
       <button @click="reset">再約一次</button>
     </section>
@@ -277,4 +306,9 @@ label > input[type="date"] { margin-left: 0.5rem; }
 .bank { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 0.9rem; margin: 0.6rem 0; font-size: 0.92rem; }
 .bank dt { color: #888; }
 .bank dd { margin: 0; }
+.manage { margin: 1rem 0; padding: 0.9rem 1.1rem; border: 1px dashed #c8e6c9; border-radius: 6px; background: #fff; }
+.manage h3 { font-size: 0.95rem; margin: 0 0 0.4rem; }
+.manage-link { display: flex; gap: 0.5rem; align-items: stretch; margin: 0.5rem 0; }
+.manage-link code { flex: 1; padding: 0.5rem 0.7rem; background: #f4f4f4; border-radius: 4px; font-size: 0.78rem; word-break: break-all; }
+.copy { padding: 0 1rem; background: #1a1a1a; color: #fff; border: 0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
 </style>

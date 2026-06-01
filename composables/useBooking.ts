@@ -30,6 +30,8 @@ export interface CreateBookingResult {
   bookingId: string
   /** 不指定設計師時，回傳系統實際指派到的設計師 */
   staffId: string | null
+  /** 客人自助改期 / 取消用的 token；務必加進 manage 連結 */
+  manageToken: string
 }
 
 // Postgres errcode / RAISE message → 使用者看得懂的中文
@@ -131,6 +133,8 @@ export function useBooking() {
   }
 
   // ---------- 內部：實際 RPC 呼叫 ----------
+  // 0007 改版: 兩支 RPC 回傳都含 (booking_id, manage_token);
+  // create_booking_any 額外有 staff_id。
   async function callCreateBooking(input: BookingInput) {
     const { data, error: err } = await supabase.rpc('create_booking', {
       p_tenant_id: input.tenantId,
@@ -142,14 +146,21 @@ export function useBooking() {
       p_customer_email: input.customerEmail ?? null,
       p_note: input.note ?? null,
     })
+    const row = Array.isArray(data) ? data[0] : data
     return {
       err,
-      result: err ? null : ({ bookingId: data as string, staffId: input.staffId! } as CreateBookingResult),
+      result:
+        err || !row
+          ? null
+          : ({
+              bookingId: row.booking_id as string,
+              staffId: input.staffId!,
+              manageToken: row.manage_token as string,
+            } as CreateBookingResult),
     }
   }
 
   async function callCreateBookingAny(input: BookingInput) {
-    // create_booking_any 回傳 (booking_id, staff_id) → 單列物件
     const { data, error: err } = await supabase.rpc('create_booking_any', {
       p_tenant_id: input.tenantId,
       p_service_id: input.serviceId,
@@ -165,7 +176,11 @@ export function useBooking() {
       result:
         err || !row
           ? null
-          : ({ bookingId: row.booking_id as string, staffId: row.staff_id as string } as CreateBookingResult),
+          : ({
+              bookingId: row.booking_id as string,
+              staffId: row.staff_id as string,
+              manageToken: row.manage_token as string,
+            } as CreateBookingResult),
     }
   }
 
