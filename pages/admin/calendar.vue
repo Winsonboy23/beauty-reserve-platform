@@ -306,7 +306,7 @@ async function setStatus(b: Booking, status: Booking['status']) {
 /* ---------- Day cell ---------- */
 .cell {
   background: #fdfaf1;
-  border: 1.5px solid #2b2b2b;
+  border: 1px solid #2b2b2b;
   border-radius: 14px;
   padding: 0.55rem 0.7rem;
   cursor: pointer;
@@ -330,14 +330,14 @@ async function setStatus(b: Booking, status: Booking['status']) {
 /* 今日: 內部加陰影框 */
 .cell.today { box-shadow: inset 0 0 0 2px #444; }
 
-/* 有事件 + 當月: 整張橘黃高亮 */
+/* 有事件 + 當月: 整張橘黃高亮, 邊框 1px */
 .cell.has {
   background: #f5b945;
   border-color: #1f1f1f;
 }
 
-/* 選中: 黑邊強調 */
-.cell.selected { box-shadow: inset 0 0 0 3px #000; }
+/* 選中: 2px 黑邊 (inset 不撐版面) */
+.cell.selected { box-shadow: inset 0 0 0 2px #000; }
 
 .day-num {
   font-size: 0.92rem;
@@ -399,4 +399,59 @@ th { font-weight: 600; color: #555; font-size: 0.82rem; }
 .day-detail .actions button.ghost { background: #f4f4f4; color: #1a1a1a; }
 .day-detail .actions button.danger { color: #c0392b; }
 .err { color: #c0392b; max-width: 1100px; margin: 1rem auto; }
+
+/* ========== Mobile (< 768px) ========== */
+@media (max-width: 768px) {
+  .page { padding: 1rem 0.5rem; margin: -1.5rem; }
+
+  /* 月份名改成水平置頂,不再吃 cell 旁邊的空間 */
+  .cal-frame { gap: 0.2rem; }
+  .nav { font-size: 2rem; width: 1.8rem; }
+  .cal-content { grid-template-columns: 1fr; gap: 0.5rem; }
+  .month-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 1.4rem;
+    text-align: center;
+    padding: 0;
+  }
+  .month-label .year { font-size: 0.85rem; margin-left: 0.5rem; }
+
+  /* Cell 文字隱藏,只剩日期 + 有事件變橘色 + 右下小圓點顯示筆數 */
+  .grid { gap: 0.3rem; }
+  .weekday { font-size: 0.65rem; padding: 0.15rem 0; }
+  .cell { padding: 0.35rem 0.4rem; border-radius: 10px; }
+  .ev-title, .ev-time { display: none; }
+  .ev-more {
+    bottom: 0.25rem; right: 0.3rem;
+    font-size: 0.6rem; padding: 0 0.3rem;
+  }
+  .day-num { font-size: 0.78rem; }
+
+  /* 有事件的當月卡:右下加個圓點 (代替文字) 標記 */
+  .cell.has::after {
+    content: ''; position: absolute;
+    bottom: 0.35rem; left: 0.35rem;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #1a1a1a;
+  }
+
+  /* Day-detail: 把 table 拆成卡片式 */
+  .day-detail { padding: 0.9rem; border-radius: 10px; }
+  .day-detail table thead { display: none; }
+  .day-detail table, .day-detail tbody, .day-detail tr, .day-detail td {
+    display: block; width: 100%;
+  }
+  .day-detail tr {
+    border: 1px solid #eee; border-radius: 8px;
+    padding: 0.6rem 0.7rem; margin-bottom: 0.6rem;
+    background: #fff;
+  }
+  .day-detail td {
+    border: 0; padding: 0.2rem 0;
+  }
+  /* 時間特別放大 */
+  .day-detail td:first-child { font-size: 1.05rem; padding-bottom: 0.3rem; }
+  .actions { padding-top: 0.4rem; }
+}
 </style>
