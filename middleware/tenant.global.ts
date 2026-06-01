@@ -63,9 +63,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (!slug) return
 
   const supabase = useSupabaseClient()
+  // 只查 core 欄位; bank_* 等選用欄位由 /book、/manage 自己 lazy load,
+  // 避免 0004 / 0008 等 migration 還沒跑時整個 middleware 失效。
   const { data } = await supabase
     .from('tenants')
-    .select('id, slug, name, timezone, bank_name, bank_account_no, bank_account_holder, bank_transfer_note')
+    .select('id, slug, name, timezone')
     .eq('slug', slug)
     .maybeSingle()
 

@@ -8,11 +8,19 @@ interface Service { id: string; name: string; duration_minutes: number; price: n
 interface Staff { id: string; name: string; portfolio: string[] }
 
 const supabase = useSupabaseClient()
-const tenant = useState<{
+const tenantBase = useState<{
   id: string; name: string; slug: string; timezone: string
-  bank_name?: string | null; bank_account_no?: string | null
-  bank_account_holder?: string | null; bank_transfer_note?: string | null
 } | null>('tenant')
+
+// tenant 主體只含 core, bank 欄位在這頁 lazy load (避免 middleware 撞到 0004 沒跑)
+const bankInfo = ref<{
+  bank_name: string | null; bank_account_no: string | null
+  bank_account_holder: string | null; bank_transfer_note: string | null
+} | null>(null)
+
+const tenant = computed(() => tenantBase.value && bankInfo.value
+  ? { ...tenantBase.value, ...bankInfo.value }
+  : tenantBase.value)
 const { getAvailableSlots, createBooking, loading: bkLoading, error: bkError } = useBooking()
 const { publicUrl } = usePortfolio()
 
@@ -25,7 +33,7 @@ useSeoMeta({
 })
 
 // 找不到 tenant: 子網域不存在 → 404
-if (!tenant.value) {
+if (!tenantBase.value) {
   throw createError({
     statusCode: 404,
     statusMessage: '找不到這家店',
@@ -33,6 +41,18 @@ if (!tenant.value) {
     fatal: true,
   })
 }
+
+// Lazy-load bank info (0004 可能還沒跑,失敗就靜默)
+;(async () => {
+  if (!tenantBase.value) return
+  const { data } = await supabase
+    .from('tenants')
+    .select('bank_name, bank_account_no, bank_account_holder, bank_transfer_note')
+    .eq('id', tenantBase.value.id)
+    .maybeSingle()
+    .throwOnError() as any
+  if (data) bankInfo.value = data
+})().catch(() => { /* 0004 沒跑,沒事,訂金那塊就顯示「請聯絡店家」 */ })
 
 // 短編號 (給客人轉帳備註用): 取 UUID 前 6 碼大寫,易於人類識讀
 function shortRef(id: string) { return id.slice(0, 6).toUpperCase() }

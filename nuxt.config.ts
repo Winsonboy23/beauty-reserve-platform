@@ -21,4 +21,12 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
   },
+
+  // 允許子網域開發 (lvh.me 是公開的 wildcard DNS → 127.0.0.1);
+  // Vite 7 預設只放行 localhost,得手動加。
+  vite: {
+    server: {
+      allowedHosts: ['.lvh.me', 'localhost'],
+    },
+  },
 })
