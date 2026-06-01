@@ -5,6 +5,8 @@ export default defineNuxtConfig({
 
   modules: ['@nuxtjs/supabase'],
 
+  css: ['~/assets/css/liquid-glass.css'],
+
   // @nuxtjs/supabase 預設會把所有頁面導去 /login;
   // 前台 storefront (anon 預約) 必須關掉自動 redirect,改由 admin middleware 自行守衛。
   supabase: {

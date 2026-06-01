@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// 後台 layout: 需登入 (middleware/auth.ts 守衛 /admin/* 路由)。
-// 載入 plan_status,頂部 banner 顯示試用倒數 / 觸頂警告。
+// 後台 layout - Liquid Glass floating nav bar
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
 const { tenant, load: loadTenant } = useMyTenant()
@@ -16,7 +15,6 @@ const planLabel = computed(() => {
   return ({ free: '免費', basic: '基本', pro: '專業' } as any)[status.value.plan]
 })
 
-// 是否有任一項已觸頂
 const hitLimit = computed(() => {
   if (!status.value) return false
   return (['services','staff','members','bookings_this_month'] as const).some(k => usage(k).full)
@@ -30,53 +28,124 @@ async function signOut() {
 
 <template>
   <div class="admin">
-    <header class="admin-header">
-      <strong>後台</strong>
-      <nav>
-        <NuxtLink to="/admin/calendar">月曆</NuxtLink>
-        <NuxtLink to="/admin">清單</NuxtLink>
-        <NuxtLink to="/admin/services">服務</NuxtLink>
-        <NuxtLink to="/admin/staff">員工</NuxtLink>
-        <NuxtLink to="/admin/members">會員</NuxtLink>
-        <NuxtLink to="/admin/billing">方案 <span class="chip">{{ planLabel }}</span></NuxtLink>
-        <NuxtLink to="/admin/settings">設定</NuxtLink>
-        <span v-if="user" class="user">{{ user.email }} <button @click="signOut">登出</button></span>
-      </nav>
-    </header>
+    <!-- Floating glass nav -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <div class="brand">後台</div>
+        <div class="links">
+          <NuxtLink to="/admin/calendar">月曆</NuxtLink>
+          <NuxtLink to="/admin">清單</NuxtLink>
+          <NuxtLink to="/admin/services">服務</NuxtLink>
+          <NuxtLink to="/admin/staff">員工</NuxtLink>
+          <NuxtLink to="/admin/members">會員</NuxtLink>
+          <NuxtLink to="/admin/billing" class="nav-billing">
+            方案 <span class="lg-pill lg-pill-accent">{{ planLabel || '—' }}</span>
+          </NuxtLink>
+          <NuxtLink to="/admin/settings">設定</NuxtLink>
+        </div>
+        <div v-if="user" class="user">
+          <span class="lg-footnote">{{ user.email }}</span>
+          <button class="lg-btn lg-btn-secondary lg-btn-sm" @click="signOut">登出</button>
+        </div>
+      </div>
+    </nav>
 
-    <!-- 試用倒數 banner -->
+    <!-- Banners -->
     <div v-if="status?.status === 'trialing' && trialDaysLeft !== null && trialDaysLeft <= 3" class="banner warn">
-      ⏰ 試用期剩 {{ trialDaysLeft }} 天,到期後自動降級為免費方案。
-      <NuxtLink to="/admin/billing">立刻升級 →</NuxtLink>
+      <span>⏰ 試用期剩 {{ trialDaysLeft }} 天</span>
+      <NuxtLink to="/admin/billing" class="lg-btn lg-btn-filled lg-btn-sm">立刻升級</NuxtLink>
     </div>
-
-    <!-- 觸頂 banner -->
     <div v-else-if="hitLimit" class="banner danger">
-      ⚠️ 你已達到目前方案的上限,部分功能無法新增。
-      <NuxtLink to="/admin/billing">升級方案 →</NuxtLink>
+      <span>⚠️ 已達方案上限,部分功能無法新增</span>
+      <NuxtLink to="/admin/billing" class="lg-btn lg-btn-filled lg-btn-sm">升級方案</NuxtLink>
     </div>
 
-    <main class="admin-main">
+    <main class="content">
       <slot />
     </main>
   </div>
 </template>
 
 <style scoped>
-.admin-header {
-  display: flex; gap: 1rem; align-items: center;
-  padding: 0.75rem 1rem; border-bottom: 1px solid #eee; background: #fff;
+.admin { min-height: 100vh; padding-bottom: var(--s-7); }
+
+.nav {
+  position: sticky; top: var(--s-3); z-index: 50;
+  margin: var(--s-3) auto;
+  max-width: 1240px;
+  padding: 0 var(--s-3);
 }
-.admin-header nav { display: flex; gap: 1rem; align-items: center; flex: 1; flex-wrap: wrap; }
-.admin-header nav a.router-link-active { font-weight: bold; }
-.chip {
-  display: inline-block; padding: 0.05rem 0.45rem; border-radius: 8px;
-  background: #eef3ff; color: #1a47a8; font-size: 0.7rem; margin-left: 0.2rem; font-weight: 600;
+.nav-inner {
+  display: flex; align-items: center; gap: var(--s-4);
+  padding: var(--s-2) var(--s-3) var(--s-2) var(--s-4);
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(200%);
+  border: 0.5px solid var(--border-hairline);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-glass);
 }
-.user { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
-.banner { padding: 0.6rem 1rem; font-size: 0.9rem; }
-.banner.warn { background: #fff5e6; color: #b35900; }
-.banner.danger { background: #fdecea; color: #b71c1c; }
-.banner a { color: inherit; font-weight: 600; margin-left: 0.5rem; }
-.admin-main { padding: 1.5rem; }
+.brand {
+  font-weight: 700; letter-spacing: -0.01em; font-size: var(--t-callout);
+  padding: 0 var(--s-2);
+}
+.links {
+  display: flex; gap: var(--s-1); align-items: center; flex: 1; flex-wrap: wrap;
+}
+.links :deep(a) {
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  color: var(--text-secondary);
+  font-size: var(--t-subhead);
+  font-weight: 500;
+  transition: background var(--duration-fast), color var(--duration-fast);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.links :deep(a:hover) {
+  background: rgba(120, 120, 128, 0.12);
+  color: var(--text-primary);
+  opacity: 1;
+}
+.links :deep(a.router-link-exact-active),
+.links :deep(a.router-link-active) {
+  background: var(--accent-fill);
+  color: var(--accent);
+}
+.user {
+  display: flex; gap: var(--s-2); align-items: center; margin-left: auto;
+}
+
+.banner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  max-width: 1240px; margin: 0 auto var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-card);
+  font-size: var(--t-subhead);
+  font-weight: 500;
+}
+.banner.warn   { background: var(--warning-fill); color: var(--warning); }
+.banner.danger { background: var(--danger-fill);  color: var(--danger); }
+
+.content {
+  max-width: 1240px; margin: 0 auto;
+  padding: 0 var(--s-4) var(--s-6);
+}
+
+@media (max-width: 768px) {
+  .nav { margin-top: var(--s-2); }
+  .nav-inner {
+    flex-wrap: wrap;
+    padding: var(--s-2);
+    border-radius: var(--r-container);
+  }
+  .links {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .links::-webkit-scrollbar { display: none; }
+  .user { width: 100%; justify-content: flex-end; }
+}
 </style>

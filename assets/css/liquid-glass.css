@@ -1,0 +1,474 @@
+/*
+ * Liquid Glass — 設計系統 (對齊 Apple iOS 26 / macOS Tahoe)
+ *
+ * 原則:
+ *   1. 玻璃材質: backdrop-filter blur + saturate, 半透明背景, 邊界用 0.5px 弱描邊
+ *   2. 同心圓角: 容器 22, 卡片 16, 控制元件 10, pill 100
+ *   3. 8px grid, 留白慷慨
+ *   4. SF Pro 系統字, headline 用 600+ 加粗
+ *   5. 互動: tap → scale(0.96) + 短暫降低 opacity, 200ms spring 過渡
+ *   6. 色票: 中性色為主, system blue 作為唯一強調色
+ *   7. 支援 Dark mode + reduced motion
+ */
+
+:root {
+  /* ───── Color (Light) ───── */
+  --bg-base:               #f2f2f7;             /* iOS systemGroupedBackground */
+  --bg-base-mesh:          radial-gradient(ellipse at 20% 0%, #ffd7e0 0%, transparent 50%),
+                           radial-gradient(ellipse at 80% 100%, #d6e4ff 0%, transparent 50%),
+                           radial-gradient(ellipse at 60% 60%, #fff1d6 0%, transparent 60%),
+                           #f2f2f7;
+
+  --surface-glass:         rgba(255, 255, 255, 0.66);
+  --surface-glass-strong:  rgba(255, 255, 255, 0.82);
+  --surface-glass-tinted:  rgba(255, 255, 255, 0.55);
+  --surface-solid:         #ffffff;
+
+  --separator:             rgba(60, 60, 67, 0.12);
+  --border-glass:          rgba(255, 255, 255, 0.55);
+  --border-hairline:       rgba(0, 0, 0, 0.06);
+
+  --text-primary:          rgba(0, 0, 0, 0.92);
+  --text-secondary:        rgba(60, 60, 67, 0.6);
+  --text-tertiary:         rgba(60, 60, 67, 0.3);
+  --text-inverse:          rgba(255, 255, 255, 0.96);
+
+  /* ───── System accent ───── */
+  --accent:                #007aff;
+  --accent-hover:          #0a84ff;
+  --accent-fill:           rgba(0, 122, 255, 0.12);
+  --accent-fill-strong:    rgba(0, 122, 255, 0.18);
+
+  --success:               #34c759;
+  --warning:               #ff9500;
+  --danger:                #ff3b30;
+  --success-fill:          rgba(52, 199, 89, 0.15);
+  --warning-fill:          rgba(255, 149, 0, 0.15);
+  --danger-fill:           rgba(255, 59, 48, 0.15);
+
+  /* ───── Radii (concentric system) ───── */
+  --r-container:           22px;
+  --r-card:                16px;
+  --r-control:             10px;
+  --r-pill:                999px;
+  --r-input:               12px;
+
+  /* ───── Spacing (8 / 4 grid) ───── */
+  --s-1:                   4px;
+  --s-2:                   8px;
+  --s-3:                   12px;
+  --s-4:                   16px;
+  --s-5:                   24px;
+  --s-6:                   32px;
+  --s-7:                   48px;
+  --s-8:                   64px;
+
+  /* ───── Type (對齊 iOS) ───── */
+  --t-largetitle:          34px;
+  --t-title1:              28px;
+  --t-title2:              22px;
+  --t-title3:              20px;
+  --t-headline:            17px;
+  --t-body:                17px;
+  --t-callout:             16px;
+  --t-subhead:             15px;
+  --t-footnote:            13px;
+  --t-caption:             12px;
+  --t-caption2:            11px;
+
+  /* ───── Shadows ───── */
+  --shadow-glass:          0 1px 2px rgba(0,0,0,0.04),
+                           0 8px 24px rgba(0,0,0,0.06);
+  --shadow-elevated:       0 4px 16px rgba(0,0,0,0.08),
+                           0 16px 48px rgba(0,0,0,0.10);
+  --shadow-floating:       0 8px 32px rgba(0,0,0,0.12),
+                           0 24px 64px rgba(0,0,0,0.16);
+
+  /* ───── Motion ───── */
+  --ease-spring:           cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:              cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast:         150ms;
+  --duration-base:         220ms;
+  --duration-slow:         400ms;
+
+  --font-system:           -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                           "SF Pro Text", "Helvetica Neue", system-ui, "PingFang TC",
+                           "Microsoft JhengHei", sans-serif;
+}
+
+/* ───── Dark mode (auto) ───── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-base:              #000;
+    --bg-base-mesh:         radial-gradient(ellipse at 20% 0%, rgba(120, 50, 80, 0.5) 0%, transparent 60%),
+                            radial-gradient(ellipse at 80% 100%, rgba(40, 80, 160, 0.5) 0%, transparent 60%),
+                            #0c0c0e;
+
+    --surface-glass:        rgba(28, 28, 30, 0.66);
+    --surface-glass-strong: rgba(28, 28, 30, 0.86);
+    --surface-glass-tinted: rgba(44, 44, 46, 0.6);
+    --surface-solid:        #1c1c1e;
+
+    --separator:            rgba(255, 255, 255, 0.12);
+    --border-glass:         rgba(255, 255, 255, 0.08);
+    --border-hairline:      rgba(255, 255, 255, 0.06);
+
+    --text-primary:         rgba(255, 255, 255, 0.92);
+    --text-secondary:       rgba(235, 235, 245, 0.6);
+    --text-tertiary:        rgba(235, 235, 245, 0.3);
+    --text-inverse:         rgba(0, 0, 0, 0.92);
+
+    --accent:               #0a84ff;
+    --accent-hover:         #1f8aff;
+  }
+}
+
+/* ───── Global resets / base ───── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-system);
+  font-size: var(--t-body);
+  line-height: 1.45;
+  color: var(--text-primary);
+  background: var(--bg-base-mesh);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+a:hover { opacity: 0.7; }
+
+input, textarea, select, button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button { cursor: pointer; }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ============================================================
+ * Utility: 玻璃材質
+ * ============================================================ */
+.glass {
+  background: var(--surface-glass);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5px solid var(--border-hairline);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-glass);
+}
+.glass-strong {
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  backdrop-filter: blur(50px) saturate(200%);
+  border: 0.5px solid var(--border-hairline);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-elevated);
+}
+.glass-tinted {
+  background: var(--surface-glass-tinted);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 0.5px solid var(--border-hairline);
+  border-radius: var(--r-card);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass, .glass-strong, .glass-tinted { background: var(--surface-solid); }
+}
+
+/* ============================================================
+ * Components
+ * ============================================================ */
+
+/* ── Card (default container) ── */
+.lg-card {
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  backdrop-filter: blur(50px) saturate(200%);
+  border: 0.5px solid var(--border-hairline);
+  border-radius: var(--r-container);
+  padding: var(--s-5);
+  box-shadow: var(--shadow-glass);
+}
+.lg-card-tight { padding: var(--s-4); }
+
+/* ── Section heading ── */
+.lg-section-title {
+  font-size: var(--t-title3);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--s-3);
+}
+.lg-section-subtitle {
+  font-size: var(--t-footnote);
+  color: var(--text-secondary);
+  margin: 0 0 var(--s-4);
+}
+
+/* ── Typography helpers ── */
+.lg-largetitle  { font-size: var(--t-largetitle); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.lg-title1      { font-size: var(--t-title1);     font-weight: 700; letter-spacing: -0.025em; }
+.lg-title2      { font-size: var(--t-title2);     font-weight: 600; letter-spacing: -0.02em; }
+.lg-title3      { font-size: var(--t-title3);     font-weight: 600; letter-spacing: -0.015em; }
+.lg-headline    { font-size: var(--t-headline);   font-weight: 600; }
+.lg-body        { font-size: var(--t-body);       font-weight: 400; }
+.lg-callout     { font-size: var(--t-callout);    font-weight: 500; }
+.lg-subhead     { font-size: var(--t-subhead);    font-weight: 400; color: var(--text-secondary); }
+.lg-footnote    { font-size: var(--t-footnote);   color: var(--text-secondary); }
+.lg-caption     { font-size: var(--t-caption);    color: var(--text-tertiary); }
+
+/* ── Buttons ── */
+.lg-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--s-2);
+  padding: 10px 20px;
+  min-height: 38px;
+  border: 0;
+  border-radius: var(--r-pill);
+  font-size: var(--t-callout);
+  font-weight: 600;
+  background: var(--accent-fill);
+  color: var(--accent);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.lg-btn:hover { background: var(--accent-fill-strong); }
+.lg-btn:active { transform: scale(0.96); opacity: 0.85; }
+.lg-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.lg-btn-filled {
+  background: var(--accent);
+  color: white;
+}
+.lg-btn-filled:hover { background: var(--accent-hover); }
+
+.lg-btn-plain {
+  background: transparent;
+  color: var(--accent);
+  padding: 6px 12px;
+}
+.lg-btn-plain:hover { background: var(--accent-fill); }
+
+.lg-btn-secondary {
+  background: rgba(120, 120, 128, 0.16);
+  color: var(--text-primary);
+}
+.lg-btn-secondary:hover { background: rgba(120, 120, 128, 0.24); }
+
+.lg-btn-danger {
+  background: var(--danger-fill);
+  color: var(--danger);
+}
+.lg-btn-danger:hover { background: rgba(255, 59, 48, 0.22); }
+
+.lg-btn-sm { min-height: 30px; padding: 6px 14px; font-size: var(--t-subhead); }
+
+/* ── Input ── */
+.lg-input, .lg-textarea, .lg-select {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(120, 120, 128, 0.12);
+  border: 0.5px solid transparent;
+  border-radius: var(--r-input);
+  font-size: var(--t-body);
+  color: var(--text-primary);
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+  outline: none;
+}
+.lg-input:focus, .lg-textarea:focus, .lg-select:focus {
+  background: rgba(120, 120, 128, 0.18);
+  border-color: var(--accent);
+}
+.lg-input::placeholder { color: var(--text-tertiary); }
+
+.lg-field { display: flex; flex-direction: column; gap: var(--s-1); }
+.lg-field-label { font-size: var(--t-footnote); color: var(--text-secondary); padding-left: 14px; }
+
+/* ── Pill / Badge ── */
+.lg-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  background: rgba(120, 120, 128, 0.16);
+  color: var(--text-secondary);
+}
+.lg-pill-accent  { background: var(--accent-fill);  color: var(--accent); }
+.lg-pill-success { background: var(--success-fill); color: var(--success); }
+.lg-pill-warning { background: var(--warning-fill); color: var(--warning); }
+.lg-pill-danger  { background: var(--danger-fill);  color: var(--danger); }
+
+/* ── List row (iOS-style) ── */
+.lg-list { display: flex; flex-direction: column; padding: 0; margin: 0; list-style: none; }
+.lg-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 0.5px solid var(--separator);
+  transition: background var(--duration-fast);
+}
+.lg-row:last-child { border-bottom: 0; }
+.lg-row:hover { background: rgba(120,120,128,0.06); }
+
+/* ── Floating navigation bar ── */
+.lg-nav {
+  position: sticky; top: var(--s-3); z-index: 50;
+  margin: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(200%);
+  border: 0.5px solid var(--border-hairline);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-glass);
+}
+
+/* ── Form / table glass row ── */
+.lg-table { width: 100%; border-collapse: collapse; }
+.lg-table th, .lg-table td {
+  padding: var(--s-3) var(--s-3);
+  text-align: left;
+  border-bottom: 0.5px solid var(--separator);
+}
+.lg-table th {
+  font-size: var(--t-footnote);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Skeleton / muted ── */
+.lg-muted        { color: var(--text-secondary); }
+.lg-muted-strong { color: var(--text-tertiary); }
+.lg-divider      { height: 0.5px; background: var(--separator); margin: var(--s-3) 0; border: 0; }
+
+/* ── Animations ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ============================================================
+ * Legacy compat — 把現有 .card / .choice / .slot 等通用 class
+ * 強制套用 Liquid Glass 樣式,避免每頁都得重寫。
+ * scoped CSS 仍可覆蓋更細節 (顏色、邊框) 因為這裡只設定材質。
+ * ============================================================ */
+section.card, div.card {
+  background: var(--surface-glass-strong) !important;
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  backdrop-filter: blur(50px) saturate(200%);
+  border: 0.5px solid var(--border-hairline) !important;
+  border-radius: var(--r-container) !important;
+  box-shadow: var(--shadow-glass) !important;
+  padding: var(--s-5) !important;
+}
+
+/* h1/h2 in scoped pages — gentler */
+.admin h1, .page > h1 {
+  font-size: var(--t-title1);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0 0 var(--s-4);
+}
+
+/* legacy `.muted` */
+.muted { color: var(--text-secondary) !important; }
+
+/* Generic button modernization (only naked <button>s without lg- class) */
+button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x) {
+  background: rgba(120, 120, 128, 0.16);
+  color: var(--text-primary);
+  border: 0;
+  border-radius: var(--r-pill);
+  padding: 8px 16px;
+  font-size: var(--t-subhead);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
+}
+button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x):hover {
+  background: rgba(120, 120, 128, 0.24);
+}
+button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x):active {
+  transform: scale(0.96);
+}
+
+/* Naked inputs in admin pages */
+.page input[type="text"],
+.page input[type="email"],
+.page input[type="number"],
+.page input[type="password"],
+.page input[type="search"],
+.page input[type="date"],
+.page input[type="time"],
+.page input[type="url"],
+.page textarea,
+.page select,
+.card input[type="text"],
+.card input[type="email"],
+.card input[type="number"],
+.card input[type="password"],
+.card input[type="search"],
+.card input[type="date"],
+.card input[type="time"],
+.card input[type="url"],
+.card textarea,
+.card select {
+  background: rgba(120, 120, 128, 0.12);
+  border: 0.5px solid transparent;
+  border-radius: var(--r-input);
+  padding: 10px 12px;
+  font-size: var(--t-body);
+  color: var(--text-primary);
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+  outline: none;
+}
+.page input:focus, .page textarea:focus, .page select:focus,
+.card input:focus, .card textarea:focus, .card select:focus {
+  background: rgba(120, 120, 128, 0.18);
+  border-color: var(--accent);
+}
+
+/* Naked table */
+.card table { width: 100%; border-collapse: collapse; }
+.card table th, .card table td {
+  padding: var(--s-3) var(--s-2);
+  border-bottom: 0.5px solid var(--separator);
+  text-align: left;
+}
+.card table th {
+  font-size: var(--t-footnote);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

@@ -131,74 +131,74 @@ const isModifiable = computed(() => booking.value && !['cancelled', 'completed',
 
 <template>
   <main class="page">
-    <p v-if="loading" class="muted">載入中…</p>
+    <p v-if="loading" class="lg-muted">載入中…</p>
 
-    <section v-else-if="error" class="card err-card">
-      <h1>無法載入</h1>
-      <p>{{ error }}</p>
+    <section v-else-if="error" class="lg-card err-card">
+      <h1 class="lg-title2">無法載入</h1>
+      <p class="lg-subhead">{{ error }}</p>
     </section>
 
     <template v-else-if="booking">
       <header class="head">
-        <h1>{{ booking.tenant_name }}</h1>
-        <p class="muted">預約管理</p>
+        <h1 class="lg-largetitle">{{ booking.tenant_name }}</h1>
+        <p class="lg-callout lg-muted">預約管理</p>
       </header>
 
-      <!-- 預約資訊 -->
-      <section class="card">
-        <h2>你的預約</h2>
+      <section class="lg-card">
+        <h2 class="lg-section-title">你的預約</h2>
         <dl class="info">
-          <dt>時間</dt><dd><strong>{{ fmt(booking.start_at) }}</strong> – {{ fmtTimeOnly(booking.end_at) }}</dd>
-          <dt>服務</dt><dd>{{ booking.service_name }} <span class="muted">({{ booking.duration_minutes }} 分 / ${{ booking.service_price }})</span></dd>
+          <dt>時間</dt><dd><strong>{{ fmt(booking.start_at) }}</strong> <span class="lg-muted">– {{ fmtTimeOnly(booking.end_at) }}</span></dd>
+          <dt>服務</dt><dd>{{ booking.service_name }} <span class="lg-muted">({{ booking.duration_minutes }} 分 / ${{ booking.service_price }})</span></dd>
           <dt>設計師</dt><dd>{{ booking.staff_name }}</dd>
-          <dt>狀態</dt><dd>
-            <span :class="['badge', 'b-' + booking.status]">
+          <dt>狀態</dt>
+          <dd>
+            <span :class="['lg-pill', 'b-' + booking.status]">
               {{ ({ pending: '待確認', confirmed: '已確認', completed: '已完成', cancelled: '已取消', no_show: '爽約' } as any)[booking.status] }}
             </span>
           </dd>
-          <dt v-if="booking.deposit_status !== 'none'">訂金</dt>
-          <dd v-if="booking.deposit_status !== 'none'">
-            ${{ booking.deposit_amount }}
-            <span :class="['badge', 'd-' + booking.deposit_status]">
-              {{ ({ paid: '已付', pending: '待付', refunded: '已退', forfeited: '沒收' } as any)[booking.deposit_status] }}
-            </span>
-          </dd>
+          <template v-if="booking.deposit_status !== 'none'">
+            <dt>訂金</dt>
+            <dd>
+              ${{ booking.deposit_amount }}
+              <span :class="['lg-pill', 'd-' + booking.deposit_status]">
+                {{ ({ paid: '已付', pending: '待付', refunded: '已退', forfeited: '沒收' } as any)[booking.deposit_status] }}
+              </span>
+            </dd>
+          </template>
         </dl>
 
-        <!-- 待付訂金 → 顯示銀行帳號 -->
-        <div v-if="booking.deposit_status === 'pending' && booking.tenant_bank_account_no" class="payment">
-          <h3>💰 訂金匯款</h3>
+        <div v-if="booking.deposit_status === 'pending' && booking.tenant_bank_account_no" class="payment glass-tinted">
+          <span class="lg-headline">訂金匯款</span>
           <dl class="bank">
             <dt>銀行</dt><dd>{{ booking.tenant_bank_name || '—' }}</dd>
             <dt>帳號</dt><dd><code>{{ booking.tenant_bank_account_no }}</code></dd>
             <dt>戶名</dt><dd>{{ booking.tenant_bank_account_holder || '—' }}</dd>
-            <dt>備註</dt><dd>請填預約編號 <code class="ref">{{ booking.id.slice(0, 6).toUpperCase() }}</code></dd>
+            <dt>備註</dt><dd>填 <code class="ref">{{ booking.id.slice(0, 6).toUpperCase() }}</code></dd>
           </dl>
-          <p v-if="booking.tenant_bank_transfer_note" class="muted small">{{ booking.tenant_bank_transfer_note }}</p>
+          <p v-if="booking.tenant_bank_transfer_note" class="lg-footnote">{{ booking.tenant_bank_transfer_note }}</p>
         </div>
       </section>
 
-      <!-- 動作: view 模式 -->
-      <section v-if="mode === 'view'" class="card">
-        <h2>需要調整?</h2>
-        <p v-if="isPast" class="muted">此預約已過時間,無法再修改。</p>
-        <p v-else-if="!isModifiable" class="muted">此預約已不可修改。</p>
+      <section v-if="mode === 'view'" class="lg-card">
+        <h2 class="lg-section-title">需要調整?</h2>
+        <p v-if="isPast" class="lg-muted">此預約已過時間,無法再修改。</p>
+        <p v-else-if="!isModifiable" class="lg-muted">此預約已不可修改。</p>
         <div v-else class="action-row">
-          <button @click="mode = 'reschedule'">改期</button>
-          <button class="danger" @click="confirmCancel" :disabled="submitting">取消預約</button>
+          <button class="lg-btn lg-btn-filled" @click="mode = 'reschedule'">改期</button>
+          <button class="lg-btn lg-btn-danger" @click="confirmCancel" :disabled="submitting">取消預約</button>
         </div>
       </section>
 
-      <!-- 動作: reschedule 模式 -->
-      <section v-if="mode === 'reschedule'" class="card">
-        <h2>選擇新時段</h2>
-        <p class="muted small">服務時長 {{ booking.duration_minutes }} 分,設計師 {{ booking.staff_name }}</p>
-        <label class="field">日期
-          <input v-model="newDate" type="date" :min="todayStr" />
+      <section v-if="mode === 'reschedule'" class="lg-card">
+        <h2 class="lg-section-title">選擇新時段</h2>
+        <p class="lg-footnote">服務時長 {{ booking.duration_minutes }} 分,設計師 {{ booking.staff_name }}</p>
+        <label class="lg-field date-field">
+          <span class="lg-field-label">日期</span>
+          <input v-model="newDate" type="date" :min="todayStr" class="lg-input" />
         </label>
 
-        <div v-if="slotsLoading" class="muted">查詢中…</div>
-        <div v-else-if="!slots.length" class="muted">這天沒有可預約時段。</div>
+        <div v-if="slotsLoading" class="lg-muted">查詢中…</div>
+        <div v-else-if="!slots.length" class="lg-muted">這天沒有可預約時段。</div>
         <div v-else class="slots">
           <button v-for="t in slots" :key="t"
                   class="slot"
@@ -209,53 +209,76 @@ const isModifiable = computed(() => booking.value && !['cancelled', 'completed',
         </div>
 
         <div class="action-row">
-          <button :disabled="!newSlot || submitting" @click="confirmReschedule">
+          <button class="lg-btn lg-btn-filled" :disabled="!newSlot || submitting" @click="confirmReschedule">
             {{ submitting ? '處理中…' : '確認改到此時段' }}
           </button>
-          <button class="ghost" @click="mode = 'view'">取消</button>
+          <button class="lg-btn lg-btn-secondary" @click="mode = 'view'">返回</button>
         </div>
       </section>
 
-      <p v-if="error" class="err">{{ error }}</p>
+      <p v-if="error" class="lg-pill lg-pill-danger err-pill">{{ error }}</p>
     </template>
   </main>
 </template>
 
 <style scoped>
-.page { max-width: 640px; margin: 2rem auto; padding: 0 1rem; font-family: system-ui; line-height: 1.5; }
-.head h1 { margin: 0 0 0.3rem; }
-.muted { color: #888; font-size: 0.92rem; }
-.small { font-size: 0.85rem; }
-.card { background: #fff; padding: 1.1rem 1.25rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 1rem; }
-.card h2 { font-size: 1rem; margin: 0 0 0.75rem; color: #333; }
-.err-card { border-color: #f5c2c0; background: #fdf3f2; }
-.info { display: grid; grid-template-columns: max-content 1fr; gap: 0.45rem 1rem; margin: 0; }
-.info dt { color: #888; font-size: 0.9rem; }
-.info dd { margin: 0; font-size: 0.95rem; }
-.badge { display: inline-block; font-size: 0.75rem; padding: 0.05rem 0.45rem; border-radius: 4px; background: #eee; margin-left: 0.3rem; }
-.b-pending   { background: #fff5e6; color: #b35900; }
-.b-confirmed { background: #e3f2fd; color: #0d47a1; }
-.b-completed { background: #e8f5e9; color: #1b5e20; }
-.b-cancelled { background: #f5f5f5; color: #777; }
-.b-no_show   { background: #fce4ec; color: #880e4f; }
-.d-paid    { background: #e8f5e9; color: #1b5e20; }
-.d-pending { background: #fff5e6; color: #b35900; }
-.action-row { display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
-button { padding: 0.55rem 1.1rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.95rem; }
-button.ghost { background: #f4f4f4; color: #1a1a1a; }
-button.danger { background: #c0392b; }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-.field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; margin: 0.5rem 0; }
-.field input { padding: 0.45rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
-.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 0.7rem; }
-.slot { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: #fff; color: #1a1a1a; }
-.slot.active { background: #1a1a1a; color: #fff; }
-.err { color: #c0392b; font-size: 0.9rem; }
-.payment { background: #fff8e1; border-radius: 6px; padding: 0.9rem 1.1rem; margin-top: 1rem; }
-.payment h3 { font-size: 0.95rem; margin: 0 0 0.5rem; }
-.bank { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 0.9rem; margin: 0; font-size: 0.92rem; }
-.bank dt { color: #888; }
+.page {
+  max-width: 680px; margin: var(--s-6) auto;
+  padding: 0 var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-4);
+}
+.head { text-align: center; padding: var(--s-3) 0; }
+.head h1 { margin: 0 0 var(--s-1); }
+.err-card { background: var(--danger-fill); }
+.info {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: var(--s-2) var(--s-4); margin: 0;
+}
+.info dt { color: var(--text-secondary); font-size: var(--t-footnote); padding-top: 3px; }
+.info dd { margin: 0; font-size: var(--t-callout); display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+.b-pending   { background: var(--warning-fill); color: var(--warning); }
+.b-confirmed { background: var(--accent-fill); color: var(--accent); }
+.b-completed { background: var(--success-fill); color: var(--success); }
+.b-cancelled { background: rgba(120,120,128,0.16); color: var(--text-secondary); }
+.b-no_show   { background: var(--danger-fill); color: var(--danger); }
+.d-paid    { background: var(--success-fill); color: var(--success); }
+.d-pending { background: var(--warning-fill); color: var(--warning); }
+
+.payment {
+  margin-top: var(--s-4); padding: var(--s-4);
+  border-radius: var(--r-card);
+  display: flex; flex-direction: column; gap: var(--s-2);
+}
+.bank {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: 6px var(--s-3); margin: 0; font-size: var(--t-subhead);
+}
+.bank dt { color: var(--text-secondary); }
 .bank dd { margin: 0; }
-code { background: #f4f4f4; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
-code.ref { font-size: 0.95rem; font-weight: 600; color: #b35900; background: #fff3cd; padding: 0.15rem 0.5rem; }
+code { background: rgba(120,120,128,0.12); padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
+code.ref { background: var(--warning-fill); color: var(--warning); font-weight: 700; }
+
+.action-row { display: flex; gap: var(--s-2); margin-top: var(--s-3); flex-wrap: wrap; }
+.date-field { max-width: 280px; margin: var(--s-3) 0; }
+
+.slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: var(--s-2); margin-top: var(--s-3);
+}
+.slot {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-control);
+  color: var(--text-primary);
+  font-size: var(--t-subhead); font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration-fast), transform var(--duration-fast);
+}
+.slot:hover { background: rgba(255,255,255,0.8); }
+.slot:active { transform: scale(0.94); }
+.slot.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.err-pill { align-self: flex-start; }
 </style>

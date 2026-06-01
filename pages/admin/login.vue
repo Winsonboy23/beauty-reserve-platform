@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// 後台登入 / 註冊頁。
-// 為了 MVP demo 同時開放 sign-up; 之後正式上線改為「邀請制 / 註冊 → 自動建立 tenant」流程。
 definePageMeta({ layout: false })
 
 const supabase = useSupabaseClient()
@@ -13,7 +11,6 @@ const loading = ref(false)
 const errMsg = ref<string | null>(null)
 const okMsg = ref<string | null>(null)
 
-// 已登入直接導去後台首頁
 watchEffect(() => {
   if (user.value) navigateTo('/admin')
 })
@@ -25,21 +22,18 @@ async function submit() {
   try {
     if (mode.value === 'signin') {
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.value,
-        password: password.value,
+        email: email.value, password: password.value,
       })
       if (error) throw error
-      // user watcher 會自動 navigate
     } else {
       const { error } = await supabase.auth.signUp({
-        email: email.value,
-        password: password.value,
+        email: email.value, password: password.value,
       })
       if (error) throw error
-      okMsg.value = '註冊成功!如果 Supabase Auth 有開 email 驗證,請去信箱收信。然後告訴開發者用此 email 跑 seed SQL 取得店家綁定。'
+      okMsg.value = '註冊成功!如需驗證 email,請去信箱收信。'
     }
   } catch (e: any) {
-    errMsg.value = e?.message ?? '登入/註冊失敗'
+    errMsg.value = e?.message ?? '登入 / 註冊失敗'
   } finally {
     loading.value = false
   }
@@ -47,22 +41,30 @@ async function submit() {
 </script>
 
 <template>
-  <div class="login-wrap">
-    <form class="login-card" @submit.prevent="submit">
-      <h1>後台{{ mode === 'signin' ? '登入' : '註冊' }}</h1>
+  <div class="wrap">
+    <form class="lg-card card" @submit.prevent="submit">
+      <header class="head">
+        <h1 class="lg-title1">{{ mode === 'signin' ? '登入' : '註冊' }}</h1>
+        <p class="lg-subhead">店家後台</p>
+      </header>
 
-      <label>Email
-        <input v-model="email" type="email" required autocomplete="email" />
-      </label>
-      <label>密碼
-        <input v-model="password" type="password" required minlength="6" autocomplete="current-password" />
-      </label>
+      <div class="fields">
+        <label class="lg-field">
+          <span class="lg-field-label">Email</span>
+          <input v-model="email" type="email" required autocomplete="email" class="lg-input" />
+        </label>
+        <label class="lg-field">
+          <span class="lg-field-label">密碼</span>
+          <input v-model="password" type="password" required minlength="6"
+                 autocomplete="current-password" class="lg-input" />
+        </label>
+      </div>
 
-      <button :disabled="loading" type="submit">
+      <button :disabled="loading" type="submit" class="lg-btn lg-btn-filled submit-btn">
         {{ loading ? '處理中…' : mode === 'signin' ? '登入' : '註冊' }}
       </button>
 
-      <p class="switch">
+      <p class="switch lg-footnote">
         <template v-if="mode === 'signin'">
           還沒帳號? <a href="#" @click.prevent="mode = 'signup'">註冊</a>
         </template>
@@ -71,31 +73,27 @@ async function submit() {
         </template>
       </p>
 
-      <p v-if="errMsg" class="err">{{ errMsg }}</p>
-      <p v-if="okMsg" class="ok">{{ okMsg }}</p>
+      <p v-if="errMsg" class="lg-pill lg-pill-danger msg">{{ errMsg }}</p>
+      <p v-if="okMsg" class="lg-pill lg-pill-success msg">{{ okMsg }}</p>
     </form>
   </div>
 </template>
 
 <style scoped>
-.login-wrap {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: #fafafa; font-family: system-ui;
+.wrap {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s-4);
 }
-.login-card {
-  width: 100%; max-width: 360px; padding: 2rem;
-  background: #fff; border: 1px solid #eee; border-radius: 8px;
-  display: flex; flex-direction: column; gap: 0.9rem;
+.card {
+  width: 100%; max-width: 380px;
+  display: flex; flex-direction: column; gap: var(--s-4);
+  padding: var(--s-5);
 }
-.login-card h1 { font-size: 1.4rem; margin: 0 0 0.5rem; }
-label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; }
-input { padding: 0.55rem 0.7rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
-button {
-  margin-top: 0.5rem; padding: 0.65rem; border: 0; border-radius: 4px;
-  background: #1a1a1a; color: #fff; font-size: 1rem; cursor: pointer;
-}
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-.switch { font-size: 0.85rem; color: #555; text-align: center; margin: 0; }
-.err { color: #c0392b; font-size: 0.85rem; margin: 0; }
-.ok  { color: #1a7a3a; font-size: 0.85rem; margin: 0; }
+.head { text-align: center; }
+.head h1 { margin: 0 0 4px; }
+.fields { display: flex; flex-direction: column; gap: var(--s-3); }
+.submit-btn { padding: 14px; font-size: var(--t-headline); }
+.switch { text-align: center; margin: 0; }
+.msg { align-self: flex-start; max-width: 100%; white-space: normal; }
 </style>

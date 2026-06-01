@@ -196,66 +196,71 @@ function reset() {
 <template>
   <main class="page">
     <header class="head">
-      <h1>{{ tenant?.name ?? '線上預約' }}</h1>
-      <p v-if="!tenant" class="muted">店家設定中,請稍候。</p>
+      <h1 class="lg-largetitle">{{ tenant?.name ?? '線上預約' }}</h1>
+      <p v-if="!tenant" class="lg-callout lg-muted">店家設定中,請稍候。</p>
+      <p v-else class="lg-callout lg-muted">線上自助預約</p>
     </header>
 
     <!-- 成功畫面 -->
-    <section v-if="submitted" class="card success">
-      <h2>✅ 預約已送出</h2>
-      <p>
-        預約編號: <code class="ref">{{ shortRef(submitted.bookingId) }}</code>
-        <span class="muted small">(完整 ID: {{ submitted.bookingId }})</span>
-      </p>
+    <section v-if="submitted" class="lg-card success">
+      <div class="success-head">
+        <div class="check-circle">✓</div>
+        <h2 class="lg-title2">預約已送出</h2>
+        <p class="lg-subhead">
+          編號 <code class="ref">{{ shortRef(submitted.bookingId) }}</code>
+        </p>
+      </div>
 
-      <!-- 需訂金: 顯示銀行帳號 + 轉帳備註 -->
+      <!-- 需訂金 -->
       <template v-if="selectedService?.deposit_amount">
-        <div class="payment">
-          <h3>💰 訂金匯款資訊</h3>
-          <p>本服務需收訂金 <strong>${{ selectedService.deposit_amount }}</strong>,請於 24 小時內完成轉帳,逾時系統會自動釋放此時段。</p>
+        <div class="payment glass-tinted">
+          <div class="payment-head">
+            <span class="lg-headline">訂金匯款</span>
+            <span class="lg-pill lg-pill-warning">${{ selectedService.deposit_amount }}</span>
+          </div>
+          <p class="lg-footnote">24 小時內完成轉帳,逾時系統將自動釋放此時段。</p>
 
           <template v-if="tenant?.bank_account_no">
             <dl class="bank">
               <dt>銀行</dt><dd>{{ tenant.bank_name || '—' }}</dd>
               <dt>帳號</dt><dd><code>{{ tenant.bank_account_no }}</code></dd>
               <dt>戶名</dt><dd>{{ tenant.bank_account_holder || '—' }}</dd>
-              <dt>轉帳備註</dt><dd>請填入預約編號 <code class="ref">{{ shortRef(submitted.bookingId) }}</code></dd>
+              <dt>備註</dt><dd>填入 <code class="ref">{{ shortRef(submitted.bookingId) }}</code></dd>
             </dl>
-            <p v-if="tenant.bank_transfer_note" class="muted small">{{ tenant.bank_transfer_note }}</p>
+            <p v-if="tenant.bank_transfer_note" class="lg-footnote">{{ tenant.bank_transfer_note }}</p>
           </template>
-          <p v-else class="warn">
-            ⚠️ 店家尚未設定銀行帳號,請直接聯絡店家確認付款方式。
-          </p>
+          <p v-else class="lg-footnote">⚠️ 店家尚未設定銀行帳號,請直接聯絡店家。</p>
         </div>
       </template>
-
-      <!-- 不需訂金 -->
-      <p v-else class="muted">
-        本服務無須訂金,請準時到店即可。
-      </p>
+      <p v-else class="lg-subhead lg-muted">本服務無須訂金,請準時到店即可。</p>
 
       <!-- 自助管理連結 -->
-      <div class="manage">
-        <h3>📅 管理你的預約</h3>
-        <p class="muted small">收藏此連結,可隨時改期或取消(不需登入):</p>
+      <div class="manage glass-tinted">
+        <div class="payment-head">
+          <span class="lg-headline">管理你的預約</span>
+        </div>
+        <p class="lg-footnote">收藏此連結,可隨時改期或取消 (不需登入)</p>
         <div class="manage-link">
           <code>{{ manageUrl(submitted.bookingId, submitted.manageToken) }}</code>
-          <button class="copy" @click="copyManageLink(manageUrl(submitted.bookingId, submitted.manageToken))">
-            {{ copied ? '已複製 ✓' : '複製' }}
+          <button class="lg-btn lg-btn-secondary lg-btn-sm"
+                  @click="copyManageLink(manageUrl(submitted.bookingId, submitted.manageToken))">
+            {{ copied ? '已複製' : '複製' }}
           </button>
         </div>
-        <p>
-          <NuxtLink :to="`/manage/${submitted.bookingId}?t=${submitted.manageToken}`">→ 直接前往管理頁</NuxtLink>
-        </p>
+        <NuxtLink :to="`/manage/${submitted.bookingId}?t=${submitted.manageToken}`"
+                  class="lg-btn lg-btn-filled">前往管理頁</NuxtLink>
       </div>
 
-      <button @click="reset">再約一次</button>
+      <button class="lg-btn lg-btn-secondary reset-btn" @click="reset">再約一次</button>
     </section>
 
     <template v-else-if="tenant">
       <!-- step 1 服務 -->
-      <section class="card">
-        <h2>1. 選擇服務</h2>
+      <section class="lg-card step">
+        <header class="step-head">
+          <span class="step-num">1</span>
+          <h2 class="lg-title3">選擇服務</h2>
+        </header>
         <div class="choices">
           <button v-for="s in services" :key="s.id"
                   class="choice service-choice"
@@ -263,30 +268,33 @@ function reset() {
                   @click="selectedServiceId = s.id">
             <img v-if="s.image_path" :src="publicUrl(s.image_path)!" :alt="s.name" class="service-img" />
             <div class="service-meta">
-              <strong>{{ s.name }}</strong>
-              <span class="muted">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
-              <span v-if="s.deposit_amount" class="tag">需訂金 ${{ s.deposit_amount }}</span>
+              <strong class="lg-headline">{{ s.name }}</strong>
+              <span class="lg-footnote">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
+              <span v-if="s.deposit_amount" class="lg-pill lg-pill-warning">需訂金 ${{ s.deposit_amount }}</span>
             </div>
           </button>
         </div>
       </section>
 
       <!-- step 2 設計師 -->
-      <section v-if="selectedServiceId" class="card">
-        <h2>2. 選擇設計師</h2>
-        <p v-if="!eligibleStaff.length" class="muted">此服務目前無可預約設計師。</p>
+      <section v-if="selectedServiceId" class="lg-card step">
+        <header class="step-head">
+          <span class="step-num">2</span>
+          <h2 class="lg-title3">選擇設計師</h2>
+        </header>
+        <p v-if="!eligibleStaff.length" class="lg-muted">此服務目前無可預約設計師。</p>
         <div v-else class="choices">
           <button class="choice"
                   :class="{ active: selectedStaffId === '__any__' }"
                   @click="selectedStaffId = '__any__'">
-            <strong>不指定</strong>
-            <span class="muted">由系統指派最快有空的</span>
+            <strong class="lg-headline">不指定</strong>
+            <span class="lg-footnote">系統指派</span>
           </button>
           <button v-for="s in eligibleStaff" :key="s.id"
                   class="choice staff-choice"
                   :class="{ active: selectedStaffId === s.id }"
                   @click="selectedStaffId = s.id">
-            <strong>{{ s.name }}</strong>
+            <strong class="lg-headline">{{ s.name }}</strong>
             <div v-if="s.portfolio.length" class="staff-thumbs">
               <img v-for="(p, i) in s.portfolio" :key="i" :src="publicUrl(p)!" :alt="s.name + ' 作品'" />
             </div>
@@ -295,13 +303,17 @@ function reset() {
       </section>
 
       <!-- step 3 日期 + 時段 -->
-      <section v-if="selectedStaffId" class="card">
-        <h2>3. 選擇日期與時段</h2>
-        <label>日期
-          <input v-model="selectedDate" type="date" :min="todayStr" />
-        </label>
-        <div v-if="slotsLoading" class="muted">查詢中…</div>
-        <div v-else-if="!slots.length" class="muted">這天沒有可預約時段,請換一天。</div>
+      <section v-if="selectedStaffId" class="lg-card step">
+        <header class="step-head">
+          <span class="step-num">3</span>
+          <h2 class="lg-title3">選擇日期與時段</h2>
+        </header>
+        <div class="lg-field date-field">
+          <span class="lg-field-label">日期</span>
+          <input v-model="selectedDate" type="date" :min="todayStr" class="lg-input" />
+        </div>
+        <div v-if="slotsLoading" class="lg-muted">查詢中…</div>
+        <div v-else-if="!slots.length" class="lg-muted">這天沒有可預約時段,請換一天。</div>
         <div v-else class="slots">
           <button v-for="t in slots" :key="t"
                   class="slot"
@@ -313,17 +325,32 @@ function reset() {
       </section>
 
       <!-- step 4 填資料 -->
-      <section v-if="selectedSlot" class="card">
-        <h2>4. 填寫聯絡資料</h2>
+      <section v-if="selectedSlot" class="lg-card step">
+        <header class="step-head">
+          <span class="step-num">4</span>
+          <h2 class="lg-title3">填寫聯絡資料</h2>
+        </header>
         <form class="contact" @submit.prevent="submit">
-          <label>姓名 *<input v-model="customer.name" required /></label>
-          <label>電話 *<input v-model="customer.phone" required pattern="[0-9+\-\s]{6,}" /></label>
-          <label>Email<input v-model="customer.email" type="email" placeholder="可不填" /></label>
-          <label>備註<textarea v-model="customer.note" rows="2" placeholder="特殊需求,可空白" /></label>
+          <label class="lg-field">
+            <span class="lg-field-label">姓名 *</span>
+            <input v-model="customer.name" required class="lg-input" />
+          </label>
+          <label class="lg-field">
+            <span class="lg-field-label">電話 *</span>
+            <input v-model="customer.phone" required pattern="[0-9+\-\s]{6,}" class="lg-input" />
+          </label>
+          <label class="lg-field">
+            <span class="lg-field-label">Email</span>
+            <input v-model="customer.email" type="email" placeholder="可不填" class="lg-input" />
+          </label>
+          <label class="lg-field">
+            <span class="lg-field-label">備註</span>
+            <textarea v-model="customer.note" rows="2" placeholder="特殊需求,可空白" class="lg-textarea" />
+          </label>
 
-          <p v-if="bkError" class="err">{{ bkError }}</p>
+          <p v-if="bkError" class="lg-pill lg-pill-danger err-pill">{{ bkError }}</p>
 
-          <button :disabled="bkLoading" type="submit" class="primary">
+          <button :disabled="bkLoading" type="submit" class="lg-btn lg-btn-filled submit-btn">
             {{ bkLoading ? '送出中…' : '送出預約' }}
           </button>
         </form>
@@ -333,47 +360,137 @@ function reset() {
 </template>
 
 <style scoped>
-.page { max-width: 640px; margin: 2rem auto; padding: 0 1rem; font-family: system-ui; line-height: 1.5; }
-.head h1 { margin: 0 0 0.5rem; }
-.muted { color: #888; font-size: 0.9rem; }
-.tag { display: inline-block; background: #fff5e6; color: #b35900; padding: 0.05rem 0.4rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.4rem; }
-.warn { background: #fff8e1; padding: 0.6rem 0.8rem; border-radius: 6px; color: #8a6d00; }
-.card { background: #fff; padding: 1.1rem 1.25rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 1rem; }
-.card h2 { font-size: 1rem; margin: 0 0 0.75rem; color: #333; }
-.choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.6rem; }
-.choice {
-  display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start;
-  padding: 0.8rem 0.9rem; border: 1px solid #ddd; border-radius: 6px;
-  background: #fff; cursor: pointer; text-align: left; font: inherit;
+.page {
+  max-width: 680px; margin: var(--s-6) auto;
+  padding: 0 var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-4);
 }
-.choice.active { border-color: #1a1a1a; box-shadow: 0 0 0 2px #1a1a1a inset; }
+.head { text-align: center; padding: var(--s-3) 0; }
+.head h1 { margin: 0 0 var(--s-1); }
+
+/* ── Step card ── */
+.step { display: flex; flex-direction: column; gap: var(--s-3); }
+.step-head { display: flex; align-items: center; gap: var(--s-3); margin: 0; }
+.step-head h2 { margin: 0; }
+.step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent-fill); color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: var(--t-subhead);
+}
+
+/* ── Choices ── */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--s-3);
+}
+.choice {
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  padding: var(--s-3) var(--s-3);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-card);
+  cursor: pointer; text-align: left;
+  transition: transform var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.choice:hover { background: rgba(255,255,255,0.75); }
+.choice:active { transform: scale(0.97); }
+.choice.active {
+  background: var(--accent-fill);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent) inset;
+}
+
+/* service card has image */
 .service-choice { padding: 0; overflow: hidden; }
 .service-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
-.service-meta { padding: 0.7rem 0.85rem; display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start; }
-.staff-thumbs { display: flex; gap: 0.3rem; margin-top: 0.5rem; }
-.staff-thumbs img { width: 38px; height: 38px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
-.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 0.7rem; }
-.slot { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font: inherit; }
-.slot.active { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
-.contact { display: flex; flex-direction: column; gap: 0.7rem; }
-.contact label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
-.contact input, .contact textarea { padding: 0.5rem 0.65rem; border: 1px solid #ddd; border-radius: 4px; font: inherit; }
-button.primary { background: #1a1a1a; color: #fff; padding: 0.7rem; border: 0; border-radius: 4px; font-size: 1rem; cursor: pointer; }
-button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
-.success { border-color: #c8e6c9; background: #f1f8f4; }
-.success h2 { color: #1b5e20; }
-.err { color: #c0392b; font-size: 0.9rem; }
-code { background: #f4f4f4; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
-code.ref { font-size: 1rem; font-weight: 600; color: #b35900; background: #fff3cd; padding: 0.15rem 0.5rem; }
-label > input[type="date"] { margin-left: 0.5rem; }
-.payment { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 0.9rem 1.1rem; margin: 1rem 0; }
-.payment h3 { font-size: 0.95rem; margin: 0 0 0.5rem; }
-.bank { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 0.9rem; margin: 0.6rem 0; font-size: 0.92rem; }
-.bank dt { color: #888; }
-.bank dd { margin: 0; }
-.manage { margin: 1rem 0; padding: 0.9rem 1.1rem; border: 1px dashed #c8e6c9; border-radius: 6px; background: #fff; }
-.manage h3 { font-size: 0.95rem; margin: 0 0 0.4rem; }
-.manage-link { display: flex; gap: 0.5rem; align-items: stretch; margin: 0.5rem 0; }
-.manage-link code { flex: 1; padding: 0.5rem 0.7rem; background: #f4f4f4; border-radius: 4px; font-size: 0.78rem; word-break: break-all; }
-.copy { padding: 0 1rem; background: #1a1a1a; color: #fff; border: 0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+.service-meta {
+  padding: var(--s-3); display: flex; flex-direction: column;
+  gap: 4px; align-items: flex-start; width: 100%;
+}
+
+.staff-thumbs { display: flex; gap: 6px; margin-top: var(--s-2); }
+.staff-thumbs img {
+  width: 36px; height: 36px; object-fit: cover;
+  border-radius: 8px; border: 0.5px solid var(--border-hairline);
+}
+
+/* ── Slots ── */
+.slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: var(--s-2);
+}
+.slot {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-control);
+  font-size: var(--t-subhead); font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: transform var(--duration-fast), background var(--duration-fast);
+}
+.slot:hover { background: rgba(255,255,255,0.8); }
+.slot:active { transform: scale(0.94); }
+.slot.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* ── Contact form ── */
+.contact { display: flex; flex-direction: column; gap: var(--s-3); }
+.date-field { max-width: 280px; }
+.submit-btn { padding: 14px; font-size: var(--t-headline); margin-top: var(--s-2); }
+.err-pill { align-self: flex-start; }
+
+/* ── Success ── */
+.success { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-4); }
+.success-head { text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.success-head h2 { margin: 0; }
+.check-circle {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--success);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 700;
+  box-shadow: 0 8px 24px rgba(52, 199, 89, 0.32);
+}
+
+.payment, .manage {
+  border-radius: var(--r-card); padding: var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-2);
+}
+.payment-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+}
+.bank {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: 6px var(--s-3); margin: 0; font-size: var(--t-subhead);
+}
+.bank dt { color: var(--text-secondary); }
+.bank dd { margin: 0; color: var(--text-primary); }
+
+.manage-link {
+  display: flex; gap: var(--s-2); align-items: stretch;
+}
+.manage-link code {
+  flex: 1; padding: 10px 12px;
+  background: rgba(120, 120, 128, 0.12);
+  border-radius: var(--r-control);
+  font-size: 12px; word-break: break-all;
+}
+
+.reset-btn { align-self: center; }
+
+code { background: rgba(120, 120, 128, 0.12); padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
+code.ref {
+  background: var(--warning-fill); color: var(--warning);
+  font-weight: 700; padding: 2px 8px; font-size: 1em;
+}
 </style>

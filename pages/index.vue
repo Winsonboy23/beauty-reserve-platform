@@ -9,49 +9,81 @@ useSeoMeta({
     : '美業預約平台 — 你的品牌專屬預約頁',
   description: () => tenant.value
     ? `${tenant.value.name} 提供線上自助預約。立即查詢可用時段並完成預約。`
-    : '為美業店家打造可被 Google 收錄的品牌預約頁。商家專屬子網域、自訂內容、不再漏單爽約。',
+    : '為美業店家打造可被 Google 收錄的品牌預約頁。',
   ogType: 'website',
 })
 </script>
 
 <template>
   <main class="page">
-    <!-- 有 tenant: 店家品牌頁 -->
+    <!-- 店家頁 -->
     <template v-if="tenant">
-      <h1>{{ tenant.name }}</h1>
-      <p class="lead">線上 24 小時自助預約,不用打電話。</p>
-      <NuxtLink to="/book" class="cta">立即預約 →</NuxtLink>
+      <section class="hero glass-strong">
+        <h1 class="lg-largetitle">{{ tenant.name }}</h1>
+        <p class="lg-callout lg-muted">線上 24 小時自助預約,不用打電話。</p>
+        <NuxtLink to="/book" class="lg-btn lg-btn-filled cta">立即預約</NuxtLink>
+      </section>
     </template>
 
-    <!-- 無 tenant: 平台 landing -->
+    <!-- 平台 landing -->
     <template v-else>
-      <h1>美業預約平台</h1>
-      <p class="lead">
-        為美業店家打造可被 Google 搜尋到的品牌預約頁。
-        子網域、自訂內容、客人 24 小時自助預約。
-      </p>
-      <ul class="features">
-        <li>✓ 商家專屬子網域 (yourshop.example.com)</li>
-        <li>✓ 預約並發保護 — 不會有重複爽約</li>
-        <li>✓ 自助改期 / 取消連結</li>
-        <li>✓ 員工排班 + 例外日 + 多人預約</li>
-        <li>✓ 訂金人工轉帳 / 平台不抽成</li>
-      </ul>
-      <p>
-        <NuxtLink to="/admin/login" class="cta secondary">店家後台 →</NuxtLink>
-      </p>
+      <section class="hero glass-strong">
+        <h1 class="lg-largetitle">美業預約平台</h1>
+        <p class="lg-title3 lg-muted lead">
+          為美業店家打造可被 Google 搜尋到的<br>品牌專屬預約頁。
+        </p>
+        <NuxtLink to="/admin/login" class="lg-btn lg-btn-filled cta">店家登入</NuxtLink>
+      </section>
+
+      <section class="features">
+        <div class="feature glass">
+          <h3 class="lg-headline">商家專屬子網域</h3>
+          <p class="lg-subhead">yourshop.example.com · 被 Google 收錄</p>
+        </div>
+        <div class="feature glass">
+          <h3 class="lg-headline">預約並發保護</h3>
+          <p class="lg-subhead">DB 層擋同時段重疊,不會雙重爽約</p>
+        </div>
+        <div class="feature glass">
+          <h3 class="lg-headline">自助改期 / 取消</h3>
+          <p class="lg-subhead">客人收到專屬連結,自行管理</p>
+        </div>
+        <div class="feature glass">
+          <h3 class="lg-headline">人工轉帳訂金</h3>
+          <p class="lg-subhead">平台不抽成,直接進你的帳戶</p>
+        </div>
+      </section>
     </template>
   </main>
 </template>
 
 <style scoped>
-.page { max-width: 640px; margin: 4rem auto; padding: 0 1.5rem; font-family: system-ui; line-height: 1.6; }
-h1 { font-size: 2rem; margin: 0 0 0.5rem; }
-.lead { color: #555; font-size: 1.05rem; }
-.features { color: #444; padding-left: 1.2rem; line-height: 2; }
-.cta {
-  display: inline-block; margin-top: 1rem; padding: 0.7rem 1.4rem;
-  background: #1a1a1a; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 500;
+.page {
+  max-width: 760px;
+  margin: var(--s-7) auto;
+  padding: 0 var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-5);
 }
-.cta.secondary { background: #f4f4f4; color: #1a1a1a; border: 1px solid #ddd; }
+.hero {
+  padding: var(--s-7) var(--s-5);
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+  border-radius: var(--r-container);
+}
+.hero h1 { margin: 0; }
+.lead { margin: 0; max-width: 460px; }
+.cta { margin-top: var(--s-3); padding: 14px 32px; font-size: var(--t-headline); }
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s-3);
+}
+.feature {
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  display: flex; flex-direction: column; gap: var(--s-1);
+}
+.feature h3 { margin: 0; }
+.feature p { margin: 0; }
 </style>
