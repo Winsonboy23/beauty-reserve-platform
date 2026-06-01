@@ -8,8 +8,15 @@ interface Service { id: string; name: string; duration_minutes: number; price: n
 interface Staff { id: string; name: string }
 
 const supabase = useSupabaseClient()
-const tenant = useState<{ id: string; name: string; slug: string; timezone: string } | null>('tenant')
+const tenant = useState<{
+  id: string; name: string; slug: string; timezone: string
+  bank_name?: string | null; bank_account_no?: string | null
+  bank_account_holder?: string | null; bank_transfer_note?: string | null
+} | null>('tenant')
 const { getAvailableSlots, createBooking, loading: bkLoading, error: bkError } = useBooking()
+
+// 短編號 (給客人轉帳備註用): 取 UUID 前 6 碼大寫,易於人類識讀
+function shortRef(id: string) { return id.slice(0, 6).toUpperCase() }
 
 // ---------- step 1: 載入服務 ----------
 const services = ref<Service[]>([])
@@ -128,11 +135,37 @@ function reset() {
     <!-- 成功畫面 -->
     <section v-if="submitted" class="card success">
       <h2>✅ 預約已送出</h2>
-      <p>預約編號: <code>{{ submitted.bookingId }}</code></p>
-      <p v-if="selectedService?.deposit_amount" class="warn">
-        本服務需收訂金 ${{ selectedService.deposit_amount }},
-        我們會在 24 小時內聯絡你完成付款,逾時系統會自動釋放時段。
+      <p>
+        預約編號: <code class="ref">{{ shortRef(submitted.bookingId) }}</code>
+        <span class="muted small">(完整 ID: {{ submitted.bookingId }})</span>
       </p>
+
+      <!-- 需訂金: 顯示銀行帳號 + 轉帳備註 -->
+      <template v-if="selectedService?.deposit_amount">
+        <div class="payment">
+          <h3>💰 訂金匯款資訊</h3>
+          <p>本服務需收訂金 <strong>${{ selectedService.deposit_amount }}</strong>,請於 24 小時內完成轉帳,逾時系統會自動釋放此時段。</p>
+
+          <template v-if="tenant?.bank_account_no">
+            <dl class="bank">
+              <dt>銀行</dt><dd>{{ tenant.bank_name || '—' }}</dd>
+              <dt>帳號</dt><dd><code>{{ tenant.bank_account_no }}</code></dd>
+              <dt>戶名</dt><dd>{{ tenant.bank_account_holder || '—' }}</dd>
+              <dt>轉帳備註</dt><dd>請填入預約編號 <code class="ref">{{ shortRef(submitted.bookingId) }}</code></dd>
+            </dl>
+            <p v-if="tenant.bank_transfer_note" class="muted small">{{ tenant.bank_transfer_note }}</p>
+          </template>
+          <p v-else class="warn">
+            ⚠️ 店家尚未設定銀行帳號,請直接聯絡店家確認付款方式。
+          </p>
+        </div>
+      </template>
+
+      <!-- 不需訂金 -->
+      <p v-else class="muted">
+        本服務無須訂金,請準時到店即可。如需取消,請聯絡店家。
+      </p>
+
       <button @click="reset">再約一次</button>
     </section>
 
@@ -234,7 +267,14 @@ function reset() {
 button.primary { background: #1a1a1a; color: #fff; padding: 0.7rem; border: 0; border-radius: 4px; font-size: 1rem; cursor: pointer; }
 button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .success { border-color: #c8e6c9; background: #f1f8f4; }
+.success h2 { color: #1b5e20; }
 .err { color: #c0392b; font-size: 0.9rem; }
 code { background: #f4f4f4; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
+code.ref { font-size: 1rem; font-weight: 600; color: #b35900; background: #fff3cd; padding: 0.15rem 0.5rem; }
 label > input[type="date"] { margin-left: 0.5rem; }
+.payment { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 0.9rem 1.1rem; margin: 1rem 0; }
+.payment h3 { font-size: 0.95rem; margin: 0 0 0.5rem; }
+.bank { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 0.9rem; margin: 0.6rem 0; font-size: 0.92rem; }
+.bank dt { color: #888; }
+.bank dd { margin: 0; }
 </style>

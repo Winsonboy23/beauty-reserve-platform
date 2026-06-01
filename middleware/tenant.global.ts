@@ -5,7 +5,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // /admin/* 不需 tenant 解析 (老闆已知道自己屬於哪個 tenant)
   if (to.path.startsWith('/admin')) return
 
-  const tenant = useState<{ id: string; slug: string; name: string; timezone: string } | null>('tenant', () => null)
+  const tenant = useState<{
+    id: string; slug: string; name: string; timezone: string
+    bank_name?: string | null; bank_account_no?: string | null
+    bank_account_holder?: string | null; bank_transfer_note?: string | null
+  } | null>('tenant', () => null)
   if (tenant.value) return
 
   const supabase = useSupabaseClient()
@@ -16,7 +20,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const { data } = await supabase
     .from('tenants')
-    .select('id, slug, name, timezone')
+    .select('id, slug, name, timezone, bank_name, bank_account_no, bank_account_holder, bank_transfer_note')
     .eq('slug', slug)
     .maybeSingle()
 
