@@ -15,7 +15,8 @@ async function signOut() {
     <header class="admin-header">
       <strong>後台</strong>
       <nav>
-        <NuxtLink to="/admin">日曆</NuxtLink>
+        <NuxtLink to="/admin/calendar">月曆</NuxtLink>
+        <NuxtLink to="/admin">清單</NuxtLink>
         <NuxtLink to="/admin/services">服務</NuxtLink>
         <NuxtLink to="/admin/staff">員工</NuxtLink>
         <NuxtLink to="/admin/members">會員</NuxtLink>
