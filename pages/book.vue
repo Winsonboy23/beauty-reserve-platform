@@ -16,6 +16,24 @@ const tenant = useState<{
 const { getAvailableSlots, createBooking, loading: bkLoading, error: bkError } = useBooking()
 const { publicUrl } = usePortfolio()
 
+useSeoMeta({
+  title: () => tenant.value ? `${tenant.value.name} · 線上預約` : '線上預約',
+  description: () => tenant.value
+    ? `預約 ${tenant.value.name} 的服務。選擇服務、設計師與時段，立即完成預約。`
+    : '線上自助預約。',
+  ogType: 'website',
+})
+
+// 找不到 tenant: 子網域不存在 → 404
+if (!tenant.value) {
+  throw createError({
+    statusCode: 404,
+    statusMessage: '找不到這家店',
+    data: { hint: '請檢查網址是否正確,或聯絡店家確認預約頁網址。' },
+    fatal: true,
+  })
+}
+
 // 短編號 (給客人轉帳備註用): 取 UUID 前 6 碼大寫,易於人類識讀
 function shortRef(id: string) { return id.slice(0, 6).toUpperCase() }
 
