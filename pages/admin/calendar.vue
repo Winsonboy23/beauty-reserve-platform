@@ -390,11 +390,13 @@ th { font-weight: 600; color: #555; font-size: 0.82rem; }
 .d-none    { background: #f5f5f5; color: #777; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 
-button:not(.nav) {
+/* 注意: 只給 day-detail 區的按鈕,別用 button:not(.nav) 全域覆蓋,
+   否則會吃到 .cell 也是 button 的背景 */
+.day-detail .actions button {
   padding: 0.35rem 0.65rem; border: 0; border-radius: 4px;
   background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.82rem;
 }
-button.ghost { background: #f4f4f4; color: #1a1a1a; }
-button.danger { color: #c0392b; }
+.day-detail .actions button.ghost { background: #f4f4f4; color: #1a1a1a; }
+.day-detail .actions button.danger { color: #c0392b; }
 .err { color: #c0392b; max-width: 1100px; margin: 1rem auto; }
 </style>
