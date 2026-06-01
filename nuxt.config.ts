@@ -14,9 +14,17 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // server-only (絕不暴露到 client bundle)
+    resendApiKey: process.env.RESEND_API_KEY ?? '',
+    emailFrom: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+
     public: {
       // 可供前端讀取的店家預設 tenant slug, 之後改成子網域解析
       defaultTenantSlug: process.env.NUXT_PUBLIC_DEFAULT_TENANT_SLUG ?? '',
+      // 與 @nuxtjs/supabase 共用值,讓 server route 也能拿到
+      supabaseUrl: process.env.SUPABASE_URL ?? '',
+      supabaseKey: process.env.SUPABASE_KEY ?? '',
     },
   },
 

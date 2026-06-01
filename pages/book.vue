@@ -218,7 +218,24 @@ async function submit() {
     staffId: useAny ? undefined : selectedStaffId.value!,
     addonIds: Array.from(selectedAddonIds.value),
   })
-  if (result) submitted.value = result
+  if (result) {
+    submitted.value = result
+    // Fire-and-forget 通知; 失敗不影響預約已建立
+    if (customer.email) {
+      $fetch('/api/notify/booking-created', {
+        method: 'POST',
+        body: {
+          bookingId: result.bookingId,
+          manageToken: result.manageToken,
+          customerEmail: customer.email,
+          customerName: customer.name,
+        },
+      }).catch((err) => {
+        // 通知失敗只 log,不彈窗
+        console.warn('email notify failed', err)
+      })
+    }
+  }
 }
 
 function reset() {
