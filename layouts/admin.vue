@@ -32,7 +32,7 @@ async function signOut() {
       <div class="brand">後台</div>
       <nav class="links">
         <NuxtLink to="/admin/calendar" class="nav-link">月曆</NuxtLink>
-        <NuxtLink to="/admin" class="nav-link">清單</NuxtLink>
+        <NuxtLink to="/admin" class="nav-link">預約</NuxtLink>
         <NuxtLink to="/admin/services" class="nav-link">服務</NuxtLink>
         <NuxtLink to="/admin/staff" class="nav-link">員工</NuxtLink>
         <NuxtLink to="/admin/members" class="nav-link">會員</NuxtLink>
@@ -104,8 +104,8 @@ async function signOut() {
   display: inline-block;
   padding: 0.05rem 0.45rem;
   border-radius: 8px;
-  background: #2b2b2b;
-  color: #fff;
+  background: #f5b945;
+  color: #1a1a1a;
   font-size: 0.7rem;
   font-weight: 600;
 }
@@ -114,13 +114,13 @@ async function signOut() {
 .ghost {
   background: transparent;
   border: 1px solid #2b2b2b;
-  color: #2b2b2b;
+  color: #1a1a1a;
   padding: 0.35rem 0.85rem;
   border-radius: 6px;
   font-size: 0.85rem;
   cursor: pointer;
 }
-.ghost:hover { background: #2b2b2b; color: #fdfaf1; }
+.ghost:hover { background: #f5b945; }
 
 /* Banner */
 .banner {

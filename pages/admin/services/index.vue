@@ -229,9 +229,10 @@ async function deleteImage(s: Service) {
 .form-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
 .form-row label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; }
 .form-row input { padding: 0.4rem 0.55rem; border: 1px solid #ddd; border-radius: 4px; min-width: 80px; }
-button { padding: 0.45rem 0.85rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.9rem; }
+button { padding: 0.45rem 0.85rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.9rem; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
-button.ghost { background: #f4f4f4; color: #1a1a1a; }
+button.ghost { background: transparent; color: #1a1a1a; }
+button.ghost:hover { background: #f5b945; }
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th, td { text-align: left; padding: 0.55rem 0.5rem; border-bottom: 1px solid #f1f1f1; }
 th { font-weight: 600; color: #555; }
@@ -252,7 +253,7 @@ tr.inactive td { color: #aaa; }
 .thumb-x {
   position: absolute; top: -6px; right: -6px;
   width: 18px; height: 18px; line-height: 14px; padding: 0;
-  border-radius: 50%; background: #c0392b; color: #fff; font-size: 0.8rem;
+  border-radius: 50%; background: #fde2dd; color: #c0392b; border: 1px solid #c0392b; font-size: 0.8rem;
 }
 .warn-text { color: #b35900; font-size: 0.88rem; padding: 0.4rem 0.7rem; background: #fff5e6; border-radius: 4px; margin: 0 0 0.7rem; }
 .warn-text a { color: #b35900; font-weight: 600; }

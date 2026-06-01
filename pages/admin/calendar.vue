@@ -386,15 +386,24 @@ th { font-weight: 600; color: #555; font-size: 0.82rem; }
 
 .day-detail .actions button {
   padding: 0.35rem 0.65rem !important;
-  border: 0;
+  border: 1px solid #2b2b2b !important;
   border-radius: 4px !important;
-  background: #1a1a1a !important;
-  color: #fff !important;
+  background: #f5b945 !important;
+  color: #1a1a1a !important;
   cursor: pointer;
   font-size: 0.82rem !important;
 }
-.day-detail .actions button.ghost { background: #f4f4f4 !important; color: #1a1a1a !important; }
-.day-detail .actions button.danger { color: #c0392b !important; }
+.day-detail .actions button.ghost {
+  background: transparent !important;
+  color: #1a1a1a !important;
+}
+.day-detail .actions button.ghost:hover { background: #f5b945 !important; }
+.day-detail .actions button.danger {
+  background: transparent !important;
+  color: #c0392b !important;
+  border-color: #c0392b !important;
+}
+.day-detail .actions button.danger:hover { background: #fde2dd !important; }
 .err { color: #c0392b; max-width: 1100px; margin: 1rem auto; }
 
 @media (max-width: 768px) {

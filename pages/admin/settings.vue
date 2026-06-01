@@ -168,7 +168,7 @@ async function copyUrl() {
 .field input, .field textarea { padding: 0.5rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; font: inherit; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.7rem; }
 .actions { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
-button { padding: 0.55rem 1rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.95rem; }
+button { padding: 0.55rem 1rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.95rem; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 .ok { color: #1a7a3a; font-size: 0.9rem; }
 .err { color: #c0392b; font-size: 0.9rem; margin: 0.4rem 0 0; }
@@ -177,5 +177,5 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   border-radius: 4px; font-size: 0.88rem; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
 }
 .url-preview code { background: #fff; padding: 0.2rem 0.4rem; border-radius: 3px; }
-.copy-btn { padding: 0.3rem 0.7rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.82rem; }
+.copy-btn { padding: 0.3rem 0.7rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.82rem; }
 </style>

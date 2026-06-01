@@ -339,8 +339,9 @@ await Promise.all([loadStaff(), loadServices(), loadRules(), loadExceptions(), l
 .form-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; margin-top: 0.5rem; }
 .form-row label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; }
 .form-row input, .form-row select { padding: 0.4rem 0.55rem; border: 1px solid #ddd; border-radius: 4px; }
-button { padding: 0.45rem 0.85rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.9rem; }
-button.ghost { background: #f4f4f4; color: #1a1a1a; }
+button { padding: 0.45rem 0.85rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.9rem; }
+button.ghost { background: transparent; color: #1a1a1a; }
+button.ghost:hover { background: #f5b945; }
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-bottom: 0.5rem; }
 th, td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid #f1f1f1; }
 .services { display: flex; flex-wrap: wrap; gap: 0.75rem; }
@@ -349,7 +350,8 @@ th, td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid #f1
 .err { color: #c0392b; font-size: 0.9rem; }
 
 .upload-btn {
-  display: inline-block; padding: 0.55rem 1rem; background: #1a1a1a; color: #fff;
+  display: inline-block; padding: 0.55rem 1rem;
+  background: #f5b945; color: #1a1a1a; border: 1px solid #2b2b2b;
   border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-bottom: 0.7rem;
 }
 .upload-btn input { display: none; }
@@ -365,8 +367,9 @@ th, td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid #f1
 .portfolio-item .del-x {
   position: absolute; top: 6px; right: 6px;
   width: 24px; height: 24px; line-height: 20px; padding: 0;
-  border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; font-size: 1rem;
-  border: 0; cursor: pointer;
+  border-radius: 50%; background: #fde2dd; color: #c0392b;
+  font-size: 1rem; font-weight: 700;
+  border: 1px solid #c0392b; cursor: pointer;
 }
 .portfolio-item .caption {
   border: 0; border-top: 1px solid #eee; padding: 0.4rem 0.55rem; font-size: 0.8rem;

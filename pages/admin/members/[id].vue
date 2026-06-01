@@ -244,8 +244,9 @@ function statusLabel(s: string) {
 .stats strong { font-size: 1.4rem; }
 .bl-action { margin-left: auto; }
 .hint { font-size: 0.72rem; color: #c0392b; }
-.badge-bl { display: inline-block; background: #c0392b; color: #fff; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 8px; margin-left: 0.5rem; vertical-align: middle; }
-button.danger { background: #c0392b; }
+.badge-bl { display: inline-block; background: #fde2dd; color: #c0392b; border: 1px solid #c0392b; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 8px; margin-left: 0.5rem; vertical-align: middle; }
+button.danger { background: transparent !important; color: #c0392b !important; border: 1px solid #c0392b !important; }
+button.danger:hover { background: #fde2dd !important; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.7rem; }
 .field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; margin-top: 0.7rem; }
 .field input, .field textarea { padding: 0.45rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; font: inherit; }
@@ -255,7 +256,7 @@ button.danger { background: #c0392b; }
 .tag-x { background: transparent; border: 0; color: #1a47a8; cursor: pointer; font-size: 1rem; line-height: 1; padding: 0; }
 .tag-input { padding: 0.3rem 0.5rem; border: 1px dashed #ccc; border-radius: 12px; font-size: 0.85rem; min-width: 120px; }
 .actions { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
-button { padding: 0.5rem 0.9rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.9rem; }
+button { padding: 0.5rem 0.9rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.9rem; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #f1f1f1; }

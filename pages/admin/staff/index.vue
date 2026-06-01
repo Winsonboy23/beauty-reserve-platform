@@ -111,9 +111,10 @@ async function toggleActive(s: Staff) {
 .form-row { display: flex; gap: 0.75rem; align-items: end; }
 .form-row label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 0.25rem; }
 .form-row input { padding: 0.4rem 0.55rem; border: 1px solid #ddd; border-radius: 4px; }
-button, .btn { padding: 0.45rem 0.85rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; }
+button, .btn { padding: 0.45rem 0.85rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
-button.ghost, .btn.ghost { background: #f4f4f4; color: #1a1a1a; }
+button.ghost, .btn.ghost { background: transparent; color: #1a1a1a; }
+button.ghost:hover, .btn.ghost:hover { background: #f5b945; }
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th, td { text-align: left; padding: 0.55rem 0.5rem; border-bottom: 1px solid #f1f1f1; }
 th { font-weight: 600; color: #555; }

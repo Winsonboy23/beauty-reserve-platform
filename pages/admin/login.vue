@@ -109,8 +109,8 @@ async function submit() {
 .field input:focus { border-color: #2b2b2b; }
 .submit-btn {
   padding: 0.75rem;
-  background: #1a1a1a; color: #fdfaf1;
-  border: 0; border-radius: 6px;
+  background: #f5b945; color: #1a1a1a;
+  border: 1px solid #2b2b2b; border-radius: 6px;
   font-size: 1rem; font-weight: 500;
   cursor: pointer; font-family: inherit;
   transition: opacity 0.15s;

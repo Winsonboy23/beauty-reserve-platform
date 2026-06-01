@@ -128,8 +128,10 @@ function fmtTrial(iso: string | null) {
 .plan-card .price { font-size: 1.3rem; font-weight: 600; color: #1a1a1a; }
 .plan-card ul { padding-left: 1.1rem; margin: 0.3rem 0; color: #555; font-size: 0.88rem; line-height: 1.6; }
 .plan-card button, .plan-card .btn {
-  margin-top: auto; padding: 0.55rem; border-radius: 4px; border: 0;
-  background: #1a1a1a; color: #fff; text-align: center; text-decoration: none;
+  margin-top: auto; padding: 0.55rem;
+  border-radius: 4px; border: 1px solid #2b2b2b;
+  background: #f5b945; color: #1a1a1a;
+  text-align: center; text-decoration: none;
   font-size: 0.9rem; cursor: pointer;
 }
 .plan-card button:disabled { opacity: 0.5; cursor: not-allowed; }

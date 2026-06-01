@@ -192,9 +192,11 @@ th { font-weight: 600; color: #555; font-size: 0.82rem; }
 .d-pending { background: #fff5e6; color: #b35900; }
 .d-none { background: #f5f5f5; color: #777; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-button { padding: 0.35rem 0.65rem; border: 0; border-radius: 4px; background: #1a1a1a; color: #fff; cursor: pointer; font-size: 0.82rem; }
-button.ghost { background: #f4f4f4; color: #1a1a1a; }
-button.danger { color: #c0392b; }
+button { padding: 0.35rem 0.65rem; border: 1px solid #2b2b2b; border-radius: 4px; background: #f5b945; color: #1a1a1a; cursor: pointer; font-size: 0.82rem; }
+button.ghost { background: transparent; color: #1a1a1a; }
+button.ghost:hover { background: #f5b945; }
+button.danger { background: transparent; color: #c0392b; border-color: #c0392b; }
+button.danger:hover { background: #fde2dd; }
 .err { color: #c0392b; }
 tr.st-cancelled td { opacity: 0.55; }
 </style>

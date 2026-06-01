@@ -414,24 +414,41 @@ button { cursor: pointer; }
   backdrop-filter: none;
 }
 
-/* Naked buttons in admin — 純黑 fill, 短圓角 */
+/* Naked buttons in admin — 橘黃 fill + 黑字 (對齊月曆 has-event), 短圓角 */
 .admin button:not([class*="lg-"]):not(.nav-btn):not(.cell):not(.slot):not(.choice):not(.thumb):not(.thumb-x):not(.copy):not(.copy-btn):not(.del-x):not(.tag-x) {
-  background: var(--admin-text);
-  color: #fff;
-  border: 0;
+  background: var(--admin-accent);
+  color: var(--admin-text);
+  border: 1px solid var(--admin-line);
   border-radius: 6px;
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.05s;
+  transition: opacity 0.15s, transform 0.05s, background 0.15s;
 }
 .admin button:hover:not(:disabled) { opacity: 0.85; }
 .admin button:active { transform: scale(0.97); }
 .admin button:disabled { opacity: 0.4; cursor: not-allowed; }
-.admin button.ghost { background: transparent; color: var(--admin-text); border: 1px solid var(--admin-line); }
-.admin button.danger { background: #c0392b; }
+.admin button.ghost {
+  background: transparent;
+  color: var(--admin-text);
+  border: 1px solid var(--admin-line);
+}
+.admin button.ghost:hover:not(:disabled) {
+  background: var(--admin-accent);
+  opacity: 1;
+}
+.admin button.danger {
+  background: transparent;
+  color: #c0392b;
+  border: 1px solid #c0392b;
+}
+.admin button.danger:hover:not(:disabled) {
+  background: #fde2dd;
+  color: #c0392b;
+  opacity: 1;
+}
 
 /* Inputs */
 .admin input[type="text"],
