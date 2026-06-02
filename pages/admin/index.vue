@@ -116,9 +116,12 @@ async function setStatus(b: Booking, status: Booking['status']) {
   const { error: e } = await supabase
     .from('bookings').update(patch).eq('id', b.id)
   if (e) { error.value = e.message; return }
-  // 完成 → 自動加點 (沒設 earn_rate 時 RPC 自己回 0,不影響)
   if (status === 'completed' && patch.actual_amount) {
+    // 加點 → 完成通知 (按順序,通知時點數已記錄)
     await supabase.rpc('award_loyalty_points', { p_booking_id: b.id }).catch(() => {})
+    $fetch('/api/notify/booking-completed', {
+      method: 'POST', body: { bookingId: b.id },
+    }).catch((err) => console.warn('completed notify failed', err))
   }
   await fetchBookings()
 }

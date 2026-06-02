@@ -123,6 +123,72 @@ export function bookingCreatedEmail(b: BookingForEmail, siteOrigin: string) {
   return { subject: `${b.tenant_name} 預約確認 #${ref}`, html, text }
 }
 
+// =============================================================
+// 預約完成 — 老闆按「完成」時觸發, 道謝 + 提醒積點
+// =============================================================
+export function bookingCompletedEmail(
+  b: BookingForEmail,
+  siteOrigin: string,
+  pointsEarned: number,
+) {
+  const time = fmtTime(b.start_at, b.tenant_timezone)
+  const text = [
+    `${b.customer_name} 您好,`,
+    ``,
+    `感謝光臨「${b.tenant_name}」!服務已完成。`,
+    ``,
+    `服務: ${b.service_name} (${b.duration_minutes} 分)`,
+    `設計師: ${b.staff_name}`,
+    `時間: ${time}`,
+    pointsEarned > 0 ? `\n本次累積點數: ${pointsEarned} 點` : '',
+    ``,
+    `期待下次再見!`,
+    ``,
+    `${b.tenant_name}`,
+  ].join('\n')
+
+  const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${escape(b.tenant_name)} 服務完成</title></head>
+<body style="margin:0; background:#f3eedd; font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif; color:#1a1a1a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3eedd; padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background:#fdfaf1; border:1px solid #2b2b2b; border-radius:14px; overflow:hidden;">
+        <tr><td style="padding:24px 28px 16px; text-align:center;">
+          <h1 style="margin:0 0 8px; font-family:Georgia,serif; font-weight:400; font-size:28px;">感謝光臨 🌸</h1>
+          <p style="margin:0; color:#7a7570; font-size:14px;">${escape(b.tenant_name)}</p>
+        </td></tr>
+
+        <tr><td style="padding:0 28px 16px;">
+          <p style="margin:0 0 16px; font-size:15px;">${escape(b.customer_name)} 您好,本次服務已完成:</p>
+          <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+            <tr><td style="color:#7a7570; width:80px;">時間</td><td>${time}</td></tr>
+            <tr><td style="color:#7a7570;">服務</td><td>${escape(b.service_name)} <span style="color:#7a7570;">(${b.duration_minutes} 分)</span></td></tr>
+            <tr><td style="color:#7a7570;">設計師</td><td>${escape(b.staff_name)}</td></tr>
+          </table>
+        </td></tr>
+
+        ${pointsEarned > 0 ? `
+        <tr><td style="padding:0 28px 16px;">
+          <div style="background:#fff3cd; border:1px solid #f5b945; border-radius:8px; padding:14px 18px; text-align:center;">
+            <p style="margin:0; font-size:14px; color:#7a7570;">本次累積</p>
+            <p style="margin:4px 0 0; font-size:32px; font-weight:600; color:#b35900;">+${pointsEarned}</p>
+            <p style="margin:4px 0 0; font-size:13px; color:#7a7570;">點 · 下次預約可折抵</p>
+          </div>
+        </td></tr>
+        ` : ''}
+
+        <tr><td style="padding:0 28px 24px; text-align:center;">
+          <p style="margin:0; font-size:14px; color:#5b5b5b;">期待下次再見</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim()
+
+  return { subject: `感謝光臨 · ${b.tenant_name}`, html, text }
+}
+
 // 簡易 HTML escape (避免店家名 / 客人名含 <script> 等)
 function escape(s: string | null | undefined): string {
   if (!s) return ''

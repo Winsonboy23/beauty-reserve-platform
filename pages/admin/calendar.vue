@@ -178,6 +178,9 @@ async function setStatus(b: Booking, status: Booking['status']) {
   if (e) { error.value = e.message; return }
   if (status === 'completed' && patch.actual_amount) {
     await supabase.rpc('award_loyalty_points', { p_booking_id: b.id }).catch(() => {})
+    $fetch('/api/notify/booking-completed', {
+      method: 'POST', body: { bookingId: b.id },
+    }).catch((err) => console.warn('completed notify failed', err))
   }
   await fetchBookings()
 }
