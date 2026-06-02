@@ -19,24 +19,35 @@ watchEffect(() => {
 })
 
 // ---------- 載入 / 綁定 member ----------
-interface MyMember { id: string; name: string; phone: string; email: string | null; tags: string[] }
+interface MyMember { id: string; name: string; phone: string; email: string | null; tags: string[]; points_balance: number }
+interface MyLoyaltyTx { id: string; points: number; balance_after: number; source: string; created_at: string }
 const member = ref<MyMember | null>(null)
+const loyaltyTx = ref<MyLoyaltyTx[]>([])
 const memberLoading = ref(false)
 const error = ref<string | null>(null)
 
 async function loadMember() {
   if (!user.value || !tenant.value) return
   memberLoading.value = true
-  // RLS member_self_read 允許 user 讀自己; 限定當前 tenant
   const { data, error: e } = await supabase
     .from('members')
-    .select('id, name, phone, email, tags')
+    .select('id, name, phone, email, tags, points_balance')
     .eq('tenant_id', tenant.value.id)
     .eq('user_id', user.value.id)
     .maybeSingle()
   memberLoading.value = false
   if (e) { error.value = e.message; return }
   member.value = data
+}
+async function loadLoyalty() {
+  if (!member.value) return
+  const { data } = await supabase
+    .from('loyalty_transactions')
+    .select('id, points, balance_after, source, created_at')
+    .eq('member_id', member.value.id)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  loyaltyTx.value = (data ?? []) as MyLoyaltyTx[]
 }
 
 // 綁定 (輸入電話) flow
@@ -95,11 +106,19 @@ async function loadBookings() {
 }
 
 await loadMember()
-if (member.value) await loadBookings()
+if (member.value) { await loadBookings(); await loadLoyalty() }
 
 watch([user, tenant], async ([u, t]) => {
-  if (u && t) { await loadMember(); if (member.value) await loadBookings() }
+  if (u && t) {
+    await loadMember()
+    if (member.value) { await loadBookings(); await loadLoyalty() }
+  }
 })
+
+const sourceLabel = (s: string) => ({
+  earned_from_booking: '預約完成', redeemed: '兌換折抵',
+  manual_adjust: '手動調整', expired: '過期',
+} as any)[s] ?? s
 
 // ---------- 動作 ----------
 async function signOut() {
@@ -192,6 +211,25 @@ const statusLabel = (s: string) => ({
     </section>
 
     <template v-else>
+      <!-- 點數 -->
+      <section v-if="member.points_balance > 0 || loyaltyTx.length" class="lg-card points-card">
+        <div class="points-head">
+          <span class="lg-subhead lg-muted">我的點數</span>
+          <strong class="lg-largetitle points-num">{{ member.points_balance }}</strong>
+        </div>
+        <details v-if="loyaltyTx.length" class="loy-history">
+          <summary class="lg-footnote">查看點數歷史 ({{ loyaltyTx.length }})</summary>
+          <ul class="loy-list">
+            <li v-for="t in loyaltyTx" :key="t.id" class="loy-row">
+              <span class="lg-footnote lg-muted">{{ new Date(t.created_at).toLocaleDateString('zh-TW') }}</span>
+              <span class="lg-subhead">{{ sourceLabel(t.source) }}</span>
+              <span :class="t.points >= 0 ? 'pos' : 'neg'">{{ t.points >= 0 ? '+' : '' }}{{ t.points }}</span>
+              <span class="lg-footnote lg-muted">餘 {{ t.balance_after }}</span>
+            </li>
+          </ul>
+        </details>
+      </section>
+
       <!-- 未來預約 -->
       <section class="lg-card">
         <h2 class="lg-section-title">未來預約 <span class="lg-pill">{{ upcoming.length }}</span></h2>
@@ -276,6 +314,20 @@ const statusLabel = (s: string) => ({
 .b-no_show   { background: var(--danger-fill); color: var(--danger); }
 
 .err { align-self: flex-start; max-width: 100%; }
+
+.points-card { display: flex; flex-direction: column; gap: var(--s-2); }
+.points-head { display: flex; align-items: baseline; gap: var(--s-3); }
+.points-num { color: var(--accent); }
+.loy-history summary { cursor: pointer; padding: var(--s-2) 0; }
+.loy-list { list-style: none; padding: 0; margin: var(--s-2) 0 0; display: flex; flex-direction: column; gap: 4px; }
+.loy-row {
+  display: grid; grid-template-columns: 80px 1fr auto auto;
+  gap: var(--s-2); padding: var(--s-2) 0;
+  border-bottom: 0.5px solid var(--border-hairline);
+  font-size: var(--t-subhead);
+}
+.pos { color: var(--success); font-weight: 600; }
+.neg { color: var(--danger); font-weight: 600; }
 
 @media (max-width: 600px) {
   .b-row { grid-template-columns: 1fr; }

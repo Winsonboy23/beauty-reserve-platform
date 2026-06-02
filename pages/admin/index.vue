@@ -105,15 +105,18 @@ async function markDepositPaid(b: Booking) {
 async function setStatus(b: Booking, status: Booking['status']) {
   const patch: any = { status }
   if (status === 'completed') {
-    // 提示輸入實收金額; 取消等同 status 還是會更新
     const input = prompt(`「${b.member?.name ?? '客人'}」實收金額 ($) ?`, '')
-    if (input === null) return  // 使用者取消
+    if (input === null) return
     const amt = parseFloat(input)
     if (!isNaN(amt) && amt >= 0) patch.actual_amount = amt
   }
   const { error: e } = await supabase
     .from('bookings').update(patch).eq('id', b.id)
-  if (e) error.value = e.message
+  if (e) { error.value = e.message; return }
+  // 完成 → 自動加點 (沒設 earn_rate 時 RPC 自己回 0,不影響)
+  if (status === 'completed' && patch.actual_amount) {
+    await supabase.rpc('award_loyalty_points', { p_booking_id: b.id }).catch(() => {})
+  }
   await fetchBookings()
 }
 

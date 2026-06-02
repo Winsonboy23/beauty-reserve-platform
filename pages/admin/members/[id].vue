@@ -16,7 +16,12 @@ interface Member {
   id: string; name: string; phone: string; email: string | null
   note: string | null; tags: string[]; is_blacklisted: boolean
   line_user_id: string | null
+  points_balance: number
   created_at: string
+}
+interface LoyaltyTx {
+  id: string; points: number; balance_after: number
+  source: string; note: string | null; created_at: string
 }
 interface Booking {
   id: string; start_at: string; duration_minutes: number; status: string
@@ -36,7 +41,7 @@ const bookings = ref<Booking[]>([])
 async function loadMember() {
   const { data, error: e } = await supabase
     .from('members')
-    .select('id, name, phone, email, note, tags, is_blacklisted, line_user_id, created_at')
+    .select('id, name, phone, email, note, tags, is_blacklisted, line_user_id, points_balance, created_at')
     .eq('id', memberId).maybeSingle()
   if (e) { error.value = e.message; return }
   member.value = data
@@ -59,6 +64,37 @@ async function toggleBlacklist() {
   await loadMember()
 }
 
+// ---------- 點數 ----------
+const loyaltyTx = ref<LoyaltyTx[]>([])
+async function loadLoyalty() {
+  const { data, error: e } = await supabase
+    .from('loyalty_transactions')
+    .select('id, points, balance_after, source, note, created_at')
+    .eq('member_id', memberId)
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (!e) loyaltyTx.value = data as LoyaltyTx[]
+}
+
+const adjustPoints = ref<number | null>(null)
+const adjustNote = ref('')
+const adjusting = ref(false)
+async function doAdjust() {
+  if (!adjustPoints.value || adjustPoints.value === 0) return
+  adjusting.value = true
+  const { error: e } = await supabase.rpc('adjust_member_points', {
+    p_member_id: memberId,
+    p_points: adjustPoints.value,
+    p_note: adjustNote.value || null,
+  })
+  adjusting.value = false
+  if (e) { error.value = e.message; return }
+  adjustPoints.value = null
+  adjustNote.value = ''
+  await loadMember()
+  await loadLoyalty()
+}
+
 async function loadBookings() {
   const { data, error: e } = await supabase
     .from('bookings')
@@ -73,7 +109,14 @@ async function loadBookings() {
   bookings.value = (data as any) ?? []
 }
 
-await Promise.all([loadMember(), loadBookings()])
+await Promise.all([loadMember(), loadBookings(), loadLoyalty()])
+
+const sourceLabel = (s: string) => ({
+  earned_from_booking: '預約完成',
+  redeemed: '兌換折抵',
+  manual_adjust: '手動調整',
+  expired: '過期',
+} as any)[s] ?? s
 
 // ---------- 統計 ----------
 const stats = computed(() => {
@@ -156,6 +199,7 @@ function statusLabel(s: string) {
         <span v-if="stats.noShow >= 3 && !member.is_blacklisted" class="hint">建議列黑名單</span>
       </div>
       <div><span class="muted">已完成消費</span><strong>${{ stats.lifetimeValue }}</strong></div>
+      <div><span class="muted">點數餘額</span><strong>{{ member.points_balance }}</strong></div>
       <div class="bl-action">
         <button
           :class="member.is_blacklisted ? 'ghost' : 'danger'"
@@ -220,6 +264,37 @@ function statusLabel(s: string) {
       </table>
     </section>
 
+    <!-- 點數 -->
+    <section v-if="member" class="card">
+      <h2>點數 <span class="muted">餘額 {{ member.points_balance }}</span></h2>
+
+      <div class="form-row" style="margin-bottom: 0.5rem;">
+        <label class="field">手動調整 (+/−)
+          <input v-model.number="adjustPoints" type="number" placeholder="例 +100 或 -50" />
+        </label>
+        <label class="field">備註 (可空)
+          <input v-model="adjustNote" placeholder="如:生日禮、補單" />
+        </label>
+        <button :disabled="adjusting" @click="doAdjust">{{ adjusting ? '處理中…' : '送出' }}</button>
+      </div>
+
+      <p v-if="!loyaltyTx.length" class="muted">尚無點數異動。</p>
+      <table v-else>
+        <thead><tr><th>時間</th><th>來源</th><th>變動</th><th>餘額</th><th>備註</th></tr></thead>
+        <tbody>
+          <tr v-for="t in loyaltyTx" :key="t.id">
+            <td>{{ new Date(t.created_at).toLocaleString('zh-TW') }}</td>
+            <td>{{ sourceLabel(t.source) }}</td>
+            <td :class="t.points >= 0 ? 'pos' : 'neg'">
+              {{ t.points >= 0 ? '+' : '' }}{{ t.points }}
+            </td>
+            <td>{{ t.balance_after }}</td>
+            <td>{{ t.note ?? '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <!-- 過去歷史 -->
     <section v-if="member" class="card">
       <h2>歷史紀錄 <span class="muted">({{ pastBookings.length }})</span></h2>
@@ -270,4 +345,8 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #f1f1f1; }
 th { font-weight: 600; color: #555; font-size: 0.82rem; }
+.form-row { display: flex; gap: 0.7rem; align-items: end; flex-wrap: wrap; }
+.form-row .field { flex: 1; min-width: 140px; margin-top: 0; }
+.pos { color: #1b5e20; font-weight: 600; }
+.neg { color: #c0392b; font-weight: 600; }
 </style>

@@ -171,7 +171,10 @@ async function setStatus(b: Booking, status: Booking['status']) {
     if (!isNaN(amt) && amt >= 0) patch.actual_amount = amt
   }
   const { error: e } = await supabase.from('bookings').update(patch).eq('id', b.id)
-  if (e) error.value = e.message
+  if (e) { error.value = e.message; return }
+  if (status === 'completed' && patch.actual_amount) {
+    await supabase.rpc('award_loyalty_points', { p_booking_id: b.id }).catch(() => {})
+  }
   await fetchBookings()
 }
 </script>

@@ -14,11 +14,15 @@ interface TenantSettings {
   bank_account_no: string | null
   bank_account_holder: string | null
   bank_transfer_note: string | null
+  points_earn_per_dollar: number
+  points_redeem_value: number
 }
 
 const form = reactive<TenantSettings>({
   name: '', slug: '',
   bank_name: '', bank_account_no: '', bank_account_holder: '', bank_transfer_note: '',
+  points_earn_per_dollar: 0,
+  points_redeem_value: 1,
 })
 
 const RESERVED_SLUGS = new Set([
@@ -58,7 +62,7 @@ async function load() {
   loading.value = true
   const { data, error: e } = await supabase
     .from('tenants')
-    .select('name, slug, bank_name, bank_account_no, bank_account_holder, bank_transfer_note')
+    .select('name, slug, bank_name, bank_account_no, bank_account_holder, bank_transfer_note, points_earn_per_dollar, points_redeem_value')
     .eq('id', tenant.value.id)
     .maybeSingle()
   loading.value = false
@@ -82,6 +86,8 @@ async function save() {
       bank_account_no: form.bank_account_no?.trim() || null,
       bank_account_holder: form.bank_account_holder?.trim() || null,
       bank_transfer_note: form.bank_transfer_note?.trim() || null,
+      points_earn_per_dollar: form.points_earn_per_dollar,
+      points_redeem_value: form.points_redeem_value,
     })
     .eq('id', tenant.value.id)
   saving.value = false
@@ -198,6 +204,23 @@ async function clearLine() {
         <textarea v-model="form.bank_transfer_note" rows="3"
                   placeholder="例如:請於 24 小時內完成轉帳並 LINE 通知我們末五碼,逾時系統將自動釋放時段。" />
       </label>
+    </section>
+
+    <section v-if="tenant" class="card">
+      <h2>集點卡</h2>
+      <p class="muted small">
+        設 0 = 關閉集點。例:0.1 表示 $10 消費 = 1 點;1 點 = $1 折抵。
+        客人預約「completed」時自動加點 (依實收金額)。
+      </p>
+      <div class="grid">
+        <label class="field">每元賺多少點 (earn rate)
+          <input v-model.number="form.points_earn_per_dollar" type="number" min="0" step="0.01"
+                 placeholder="0 = 關閉" />
+        </label>
+        <label class="field">1 點 = 多少元 (redeem value)
+          <input v-model.number="form.points_redeem_value" type="number" min="0.01" step="0.5" />
+        </label>
+      </div>
     </section>
 
     <section v-if="tenant" class="card">
