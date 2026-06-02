@@ -4,22 +4,26 @@
 // 所有寫入走 SECURITY DEFINER RPC,不直接寫表 (RLS 已擋)。
 definePageMeta({ layout: 'storefront' })
 
-interface Service { id: string; name: string; duration_minutes: number; price: number; deposit_amount: number | null; image_path: string | null; is_addon: boolean }
+interface Service { id: string; name: string; duration_minutes: number; price: number; deposit_amount: number | null; image_path: string | null; is_addon: boolean; category_id: string | null }
 interface Staff { id: string; name: string; portfolio: string[] }
+interface Category { id: string; name: string; sort_order: number }
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const route = useRoute()
 // 預選 staff (從 /staff/[id] 進來時帶 ?staff=<id>)
 const preselectStaffId = ref<string | null>((route.query.staff as string) || null)
+// 預選 service (從 /services 進來時帶 ?service=<id>)
+const preselectServiceId = ref<string | null>((route.query.service as string) || null)
 const tenantBase = useState<{
   id: string; name: string; slug: string; timezone: string
 } | null>('tenant')
 
-// tenant 主體只含 core, bank 欄位在這頁 lazy load (避免 middleware 撞到 0004 沒跑)
+// tenant 主體只含 core, bank / line OA 欄位 lazy load
 const bankInfo = ref<{
   bank_name: string | null; bank_account_no: string | null
   bank_account_holder: string | null; bank_transfer_note: string | null
+  line_oa_share_url: string | null
 } | null>(null)
 
 const tenant = computed(() => tenantBase.value && bankInfo.value
@@ -52,7 +56,7 @@ async function loadBankInfo() {
   try {
     const { data, error: e } = await supabase
       .from('tenants')
-      .select('bank_name, bank_account_no, bank_account_holder, bank_transfer_note')
+      .select('bank_name, bank_account_no, bank_account_holder, bank_transfer_note, line_oa_share_url')
       .eq('id', tenantBase.value.id)
       .maybeSingle()
     if (!e && data) bankInfo.value = data as any
@@ -77,22 +81,52 @@ async function copyManageLink(url: string) {
   } catch {}
 }
 
-// ---------- step 1: 載入服務 ----------
+// ---------- step 1: 載入服務 + 分類 ----------
 const services = ref<Service[]>([])
+const categories = ref<Category[]>([])
 const selectedServiceId = ref<string | null>(null)
 const selectedService = computed(() => services.value.find(s => s.id === selectedServiceId.value) ?? null)
 const mainServices = computed(() => services.value.filter(s => !s.is_addon))
 const addonServices = computed(() => services.value.filter(s => s.is_addon))
 
+// 主服務分組
+const mainServiceGroups = computed(() => {
+  const map = new Map<string | null, Service[]>()
+  for (const s of mainServices.value) {
+    const key = s.category_id ?? null
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(s)
+  }
+  const out: { id: string | null; name: string; items: Service[] }[] = []
+  for (const c of categories.value) {
+    if (map.has(c.id)) out.push({ id: c.id, name: c.name, items: map.get(c.id)! })
+  }
+  if (map.has(null)) out.push({ id: null, name: categories.value.length ? '其他' : '所有服務', items: map.get(null)! })
+  return out
+})
+
 async function loadServices() {
   if (!tenant.value) return
-  const { data } = await supabase
-    .from('services')
-    .select('id, name, duration_minutes, price, deposit_amount, image_path, is_addon')
-    .eq('tenant_id', tenant.value.id)
-    .eq('is_active', true)
-    .order('name')
-  services.value = (data ?? []) as Service[]
+  const [s, c] = await Promise.all([
+    supabase.from('services')
+      .select('id, name, duration_minutes, price, deposit_amount, image_path, is_addon, category_id')
+      .eq('tenant_id', tenant.value.id)
+      .eq('is_active', true)
+      .order('name'),
+    supabase.from('service_categories')
+      .select('id, name, sort_order')
+      .eq('tenant_id', tenant.value.id)
+      .order('sort_order'),
+  ])
+  services.value = (s.data ?? []) as Service[]
+  categories.value = (c.data ?? []) as Category[]
+
+  // 預選 service (從 /services 進來)
+  if (preselectServiceId.value) {
+    const match = services.value.find(s => s.id === preselectServiceId.value && !s.is_addon)
+    if (match) selectedServiceId.value = match.id
+    preselectServiceId.value = null
+  }
 }
 await loadServices()
 
@@ -415,6 +449,12 @@ function reset() {
                   class="lg-btn lg-btn-filled">前往管理頁</NuxtLink>
       </div>
 
+      <!-- LINE OA 加好友 (店家有設) -->
+      <a v-if="tenant?.line_oa_share_url" :href="tenant.line_oa_share_url" target="_blank" rel="noopener" class="signup-hint glass-tinted">
+        <span class="lg-callout">📱 加 LINE 好友收即時通知</span>
+        <span class="lg-btn lg-btn-filled lg-btn-sm">加好友</span>
+      </a>
+
       <!-- 引導註冊 (沒登入時才顯示) -->
       <div v-if="!user" class="signup-hint glass-tinted">
         <span class="lg-callout">下次想免填資料?</span>
@@ -426,24 +466,27 @@ function reset() {
     </section>
 
     <template v-else-if="tenant">
-      <!-- step 1 服務 -->
+      <!-- step 1 服務 (按分類分組) -->
       <section class="lg-card step">
         <header class="step-head">
           <span class="step-num">1</span>
           <h2 class="lg-title3">選擇服務</h2>
         </header>
-        <div class="choices">
-          <button v-for="s in mainServices" :key="s.id"
-                  class="choice service-choice"
-                  :class="{ active: selectedServiceId === s.id }"
-                  @click="selectedServiceId = s.id">
-            <img v-if="s.image_path" :src="publicUrl(s.image_path)!" :alt="s.name" class="service-img" />
-            <div class="service-meta">
-              <strong class="lg-headline">{{ s.name }}</strong>
-              <span class="lg-footnote">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
-              <span v-if="s.deposit_amount" class="lg-pill lg-pill-warning">需訂金 ${{ s.deposit_amount }}</span>
-            </div>
-          </button>
+        <div v-for="g in mainServiceGroups" :key="g.id ?? '__'" class="service-group">
+          <h3 v-if="mainServiceGroups.length > 1" class="group-label">{{ g.name }}</h3>
+          <div class="choices">
+            <button v-for="s in g.items" :key="s.id"
+                    class="choice service-choice"
+                    :class="{ active: selectedServiceId === s.id }"
+                    @click="selectedServiceId = s.id">
+              <img v-if="s.image_path" :src="publicUrl(s.image_path)!" :alt="s.name" class="service-img" />
+              <div class="service-meta">
+                <strong class="lg-headline">{{ s.name }}</strong>
+                <span class="lg-footnote">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
+                <span v-if="s.deposit_amount" class="lg-pill lg-pill-warning">需訂金 ${{ s.deposit_amount }}</span>
+              </div>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -612,6 +655,14 @@ function reset() {
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 600; font-size: var(--t-subhead);
 }
+.service-group { display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-3); }
+.service-group:last-child { margin-bottom: 0; }
+.group-label {
+  font-size: var(--t-subhead); font-weight: 600;
+  color: var(--text-secondary); margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 0.5px solid var(--separator);
+}
 
 /* ── Choices ── */
 .choices {
@@ -749,6 +800,7 @@ function reset() {
   border-radius: var(--r-card);
   margin: var(--s-3) 0;
   text-decoration: none;
+  color: inherit;
 }
 .coupon-row { display: flex; gap: var(--s-2); }
 .coupon-row input { flex: 1; }

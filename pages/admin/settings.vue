@@ -16,6 +16,7 @@ interface TenantSettings {
   bank_transfer_note: string | null
   points_earn_per_dollar: number
   points_redeem_value: number
+  line_oa_share_url: string | null
 }
 
 const form = reactive<TenantSettings>({
@@ -23,6 +24,7 @@ const form = reactive<TenantSettings>({
   bank_name: '', bank_account_no: '', bank_account_holder: '', bank_transfer_note: '',
   points_earn_per_dollar: 0,
   points_redeem_value: 1,
+  line_oa_share_url: '',
 })
 
 const RESERVED_SLUGS = new Set([
@@ -62,7 +64,7 @@ async function load() {
   loading.value = true
   const { data, error: e } = await supabase
     .from('tenants')
-    .select('name, slug, bank_name, bank_account_no, bank_account_holder, bank_transfer_note, points_earn_per_dollar, points_redeem_value')
+    .select('name, slug, bank_name, bank_account_no, bank_account_holder, bank_transfer_note, points_earn_per_dollar, points_redeem_value, line_oa_share_url')
     .eq('id', tenant.value.id)
     .maybeSingle()
   loading.value = false
@@ -88,6 +90,7 @@ async function save() {
       bank_transfer_note: form.bank_transfer_note?.trim() || null,
       points_earn_per_dollar: form.points_earn_per_dollar,
       points_redeem_value: form.points_redeem_value,
+      line_oa_share_url: form.line_oa_share_url?.trim() || null,
     })
     .eq('id', tenant.value.id)
   saving.value = false
@@ -265,6 +268,11 @@ const webhookUrl = computed(() => {
                  :placeholder="lineStatus?.has_secret ? '已設定,留空維持原值' : '貼入 secret'" />
         </label>
       </div>
+
+      <label class="field" style="margin-top: 0.8rem;">LINE OA 加好友連結
+        <span class="muted small">從 LINE Manager → 設定 → 取得「加入好友連結」(形如 https://line.me/R/ti/p/@xxx)</span>
+        <input v-model="form.line_oa_share_url" placeholder="https://line.me/R/ti/p/@..." />
+      </label>
 
       <div v-if="webhookUrl && lineStatus?.has_secret" class="webhook-info">
         <p class="muted small">

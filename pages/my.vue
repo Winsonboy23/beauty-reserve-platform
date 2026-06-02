@@ -79,6 +79,7 @@ interface MyBooking {
   start_at: string; end_at: string; duration_minutes: number
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
   deposit_amount: number; deposit_status: string
+  actual_amount: number | null
   note: string | null
   staff: { name: string } | null
   service: { name: string; price: number } | null
@@ -94,7 +95,7 @@ async function loadBookings() {
     .from('bookings')
     .select(`
       id, start_at, end_at, duration_minutes, status,
-      deposit_amount, deposit_status, note,
+      deposit_amount, deposit_status, actual_amount, note,
       staff:staff_id ( name ),
       service:service_id ( name, price )
     `)
@@ -119,6 +120,34 @@ const sourceLabel = (s: string) => ({
   earned_from_booking: '預約完成', redeemed: '兌換折抵',
   manual_adjust: '手動調整', expired: '過期',
 } as any)[s] ?? s
+
+// ---------- 會員儀表板 (累積消費 / 造訪次數 / 等級) ----------
+const stats = computed(() => {
+  let visits = 0, lifetimeSpend = 0
+  for (const b of bookings.value) {
+    if (b.status === 'completed') {
+      visits++
+      // 優先用 actual_amount, 沒有就用 service.price
+      lifetimeSpend += Number(b.actual_amount ?? b.service?.price ?? 0)
+    }
+  }
+  // 等級分級 (店家可調; 這裡硬編作預設)
+  let tier = '新客'
+  if (lifetimeSpend >= 20000) tier = '白金'
+  else if (lifetimeSpend >= 8000) tier = '金'
+  else if (lifetimeSpend >= 2000) tier = '銀'
+  return { visits, lifetimeSpend, tier }
+})
+
+// ---------- LINE OA 加好友 URL ----------
+const lineOaUrl = ref<string | null>(null)
+async function loadLineOa() {
+  if (!tenant.value) return
+  const { data } = await supabase
+    .from('tenants').select('line_oa_share_url').eq('id', tenant.value.id).maybeSingle()
+  lineOaUrl.value = data?.line_oa_share_url ?? null
+}
+loadLineOa()
 
 // ---------- 動作 ----------
 async function signOut() {
@@ -211,14 +240,39 @@ const statusLabel = (s: string) => ({
     </section>
 
     <template v-else>
-      <!-- 點數 -->
-      <section v-if="member.points_balance > 0 || loyaltyTx.length" class="lg-card points-card">
-        <div class="points-head">
-          <span class="lg-subhead lg-muted">我的點數</span>
-          <strong class="lg-largetitle points-num">{{ member.points_balance }}</strong>
+      <!-- 會員儀表板 -->
+      <section class="lg-card dashboard">
+        <div class="d-item">
+          <span class="lg-footnote lg-muted">會員等級</span>
+          <strong :class="['tier', `tier-${stats.tier}`]">{{ stats.tier }}</strong>
         </div>
-        <details v-if="loyaltyTx.length" class="loy-history">
-          <summary class="lg-footnote">查看點數歷史 ({{ loyaltyTx.length }})</summary>
+        <div class="d-item">
+          <span class="lg-footnote lg-muted">造訪次數</span>
+          <strong class="lg-title2">{{ stats.visits }}</strong>
+        </div>
+        <div class="d-item">
+          <span class="lg-footnote lg-muted">累積消費</span>
+          <strong class="lg-title2">${{ stats.lifetimeSpend.toLocaleString() }}</strong>
+        </div>
+        <div class="d-item">
+          <span class="lg-footnote lg-muted">點數餘額</span>
+          <strong class="lg-title2 points-balance">{{ member.points_balance }}</strong>
+        </div>
+      </section>
+
+      <!-- LINE OA 加好友 (沒綁 user_id 或還沒加好友時) -->
+      <a v-if="lineOaUrl" :href="lineOaUrl" target="_blank" rel="noopener" class="lg-card line-cta">
+        <div>
+          <strong class="lg-headline">📱 加入 LINE 好友</strong>
+          <p class="lg-footnote lg-muted">即時接收預約提醒 + 訂金確認 + 完成通知</p>
+        </div>
+        <span class="lg-btn lg-btn-filled lg-btn-sm">加好友</span>
+      </a>
+
+      <!-- 點數歷史 (儀表板已顯示餘額,這裡只展開歷史) -->
+      <section v-if="loyaltyTx.length" class="lg-card">
+        <details class="loy-history">
+          <summary class="lg-callout">點數歷史 ({{ loyaltyTx.length }})</summary>
           <ul class="loy-list">
             <li v-for="t in loyaltyTx" :key="t.id" class="loy-row">
               <span class="lg-footnote lg-muted">{{ new Date(t.created_at).toLocaleDateString('zh-TW') }}</span>
@@ -314,6 +368,30 @@ const statusLabel = (s: string) => ({
 .b-no_show   { background: var(--danger-fill); color: var(--danger); }
 
 .err { align-self: flex-start; max-width: 100%; }
+
+.dashboard {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s-4);
+}
+.d-item { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.tier {
+  font-size: var(--t-title3); font-weight: 700; letter-spacing: -0.02em;
+  padding: 4px 12px; border-radius: var(--r-pill);
+  background: rgba(120,120,128,0.16);
+}
+.tier-新客   { background: rgba(120,120,128,0.16); color: var(--text-secondary); }
+.tier-銀     { background: rgba(0, 122, 255, 0.16); color: #0066cc; }
+.tier-金     { background: rgba(245, 185, 69, 0.32); color: #8a5500; }
+.tier-白金   { background: linear-gradient(135deg, #e8e8e8, #c8c8c8); color: #2a2a2a; }
+.points-balance { color: var(--accent); }
+
+.line-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-3); text-decoration: none; color: inherit;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.line-cta:hover { transform: translateY(-1px); }
+.line-cta > div { display: flex; flex-direction: column; gap: 2px; }
 
 .points-card { display: flex; flex-direction: column; gap: var(--s-2); }
 .points-head { display: flex; align-items: baseline; gap: var(--s-3); }

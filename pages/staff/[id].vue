@@ -11,16 +11,18 @@ const staffId = route.params.id as string
 
 interface Staff { id: string; name: string }
 interface Portfolio { id: string; storage_path: string; caption: string | null }
-interface Service { id: string; name: string; duration_minutes: number; price: number }
+interface Service { id: string; name: string; duration_minutes: number; price: number; category_id: string | null }
+interface Category { id: string; name: string }
 
 const staff = ref<Staff | null>(null)
 const portfolios = ref<Portfolio[]>([])
 const services = ref<Service[]>([])
+const categories = ref<Category[]>([])
 const loading = ref(true)
 
 async function load() {
   if (!tenant.value) return
-  const [s, p, sv] = await Promise.all([
+  const [s, p, sv, cs] = await Promise.all([
     supabase.from('staff')
       .select('id, name')
       .eq('id', staffId)
@@ -32,17 +34,37 @@ async function load() {
       .eq('staff_id', staffId)
       .order('sort_order'),
     supabase.from('staff_services')
-      .select('service:service_id(id, name, duration_minutes, price, is_active, is_addon)')
+      .select('service:service_id(id, name, duration_minutes, price, is_active, is_addon, category_id)')
       .eq('staff_id', staffId),
+    supabase.from('service_categories')
+      .select('id, name, sort_order')
+      .eq('tenant_id', tenant.value.id)
+      .order('sort_order'),
   ])
   staff.value = s.data
   portfolios.value = (p.data ?? []) as Portfolio[]
   services.value = (sv.data ?? [])
     .map((r: any) => r.service)
     .filter((x: any) => x && x.is_active && !x.is_addon) as Service[]
+  categories.value = (cs.data ?? []) as Category[]
   loading.value = false
 }
 await load()
+
+const serviceGroups = computed(() => {
+  const map = new Map<string | null, Service[]>()
+  for (const s of services.value) {
+    const key = s.category_id ?? null
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(s)
+  }
+  const out: { id: string | null; name: string; items: Service[] }[] = []
+  for (const c of categories.value) {
+    if (map.has(c.id)) out.push({ id: c.id, name: c.name, items: map.get(c.id)! })
+  }
+  if (map.has(null)) out.push({ id: null, name: categories.value.length ? '其他' : '提供服務', items: map.get(null)! })
+  return out
+})
 
 // 找不到 → 404
 if (!staff.value) {
@@ -101,15 +123,20 @@ const heroImage = computed(() => portfolios.value[0]?.storage_path)
       </div>
     </header>
 
-    <!-- 能做服務 -->
+    <!-- 能做服務 (按分類) -->
     <section v-if="services.length" class="lg-card">
       <h2 class="lg-section-title">提供服務</h2>
-      <ul class="service-list">
-        <li v-for="s in services" :key="s.id" class="service-row">
-          <span class="lg-callout">{{ s.name }}</span>
-          <span class="lg-footnote lg-muted">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
-        </li>
-      </ul>
+      <div v-for="g in serviceGroups" :key="g.id ?? '__'" class="svc-group">
+        <h3 v-if="serviceGroups.length > 1" class="svc-group-title">{{ g.name }}</h3>
+        <ul class="service-list">
+          <li v-for="s in g.items" :key="s.id" class="service-row">
+            <NuxtLink :to="`/book?staff=${staff!.id}&service=${s.id}`" class="svc-link">
+              <span class="lg-callout">{{ s.name }}</span>
+              <span class="lg-footnote lg-muted">{{ s.duration_minutes }} 分 · ${{ s.price }}</span>
+            </NuxtLink>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <!-- 作品集 -->
@@ -150,13 +177,23 @@ const heroImage = computed(() => portfolios.value[0]?.storage_path)
 .info h1 { margin: 0; }
 .book-cta { align-self: flex-start; padding: 12px 24px; }
 
-.service-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
-.service-row {
-  display: flex; justify-content: space-between; align-items: baseline;
-  padding: var(--s-3) 0;
+.svc-group { margin-bottom: var(--s-3); }
+.svc-group:last-child { margin-bottom: 0; }
+.svc-group-title {
+  font-size: var(--t-subhead); font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 var(--s-1); padding-bottom: 4px;
   border-bottom: 0.5px solid var(--separator);
 }
+.service-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
+.service-row { border-bottom: 0.5px solid var(--separator); }
 .service-row:last-child { border-bottom: 0; }
+.svc-link {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: var(--s-3) 0;
+  text-decoration: none; color: inherit;
+}
+.svc-link:hover { opacity: 0.7; }
 
 .portfolio-grid {
   display: grid;

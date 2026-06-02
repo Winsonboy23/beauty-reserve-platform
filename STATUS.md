@@ -8,7 +8,7 @@
 ## 🚦 當前狀態
 
 **部署階段**: 本機開發中,還沒上線。  
-**最新 migration**: `0019_reminders_and_line_webhook.sql`  
+**最新 migration**: `0020_storefront_polish.sql`  
 **Git remote**: https://github.com/Winsonboy23/beauty-reserve-platform (main 分支)  
 **Demo URL**: 本機 `http://demo-shop.lvh.me:3000`
 
@@ -24,7 +24,8 @@
 0016_coupons.sql                    ← 業主已跑 ✅ (優惠券)
 0017_loyalty_points.sql             ← 業主已跑 ✅ (集點)
 0018_points_redemption.sql          ← 業主已跑 ✅ (點數兌換)
-0019_reminders_and_line_webhook.sql ← 待跑 (24h 提醒 + LINE webhook 綁定 + pg_net + platform_settings)
+0019_reminders_and_line_webhook.sql ← 業主已跑 ✅
+0020_storefront_polish.sql          ← 待跑 (line_oa_share_url 欄位)
 ```
 
 **生產環境上線後**:
