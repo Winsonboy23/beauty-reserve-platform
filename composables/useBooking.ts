@@ -28,6 +28,8 @@ export interface BookingInput {
   addonIds?: string[]
   /** 優惠碼，可空 */
   couponCode?: string
+  /** 點數兌換 (需登入)，可空 */
+  pointsToRedeem?: number
 }
 
 export interface CreateBookingResult {
@@ -54,6 +56,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   coupon_min_amount: '此優惠碼未達最低消費門檻。',
   coupon_max_uses: '此優惠碼已用罄。',
   coupon_member_limit: '你已使用過此優惠碼。',
+  points_login_required: '使用點數需先登入。',
+  points_member_not_linked: '此電話的會員尚未綁定你的帳號。',
+  points_not_owner: '無法使用他人的點數。',
+  points_insufficient: '點數餘額不足。',
+  points_redeem_disabled: '此店家未開啟點數折抵。',
 }
 
 /** 從 Supabase RPC 錯誤物件解析出我們在 SQL 裡 raise 的代碼字串 */
@@ -160,6 +167,7 @@ export function useBooking() {
       p_note: input.note ?? null,
       p_addon_ids: input.addonIds ?? [],
       p_coupon_code: input.couponCode ?? null,
+      p_points_to_redeem: input.pointsToRedeem ?? 0,
     })
     const row = Array.isArray(data) ? data[0] : data
     return {
@@ -186,6 +194,7 @@ export function useBooking() {
       p_note: input.note ?? null,
       p_addon_ids: input.addonIds ?? [],
       p_coupon_code: input.couponCode ?? null,
+      p_points_to_redeem: input.pointsToRedeem ?? 0,
     })
     const row = Array.isArray(data) ? data[0] : data
     return {

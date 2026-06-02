@@ -8,7 +8,7 @@
 ## 🚦 當前狀態
 
 **部署階段**: 本機開發中,還沒上線。  
-**最新 migration**: `0017_loyalty_points.sql`  
+**最新 migration**: `0018_points_redemption.sql`  
 **Git remote**: https://github.com/Winsonboy23/beauty-reserve-platform (main 分支)  
 **Demo URL**: 本機 `http://demo-shop.lvh.me:3000`
 
@@ -22,7 +22,8 @@
 0014_line_oa.sql                    ← 業主已跑 ✅
 0015_customer_accounts.sql          ← 業主已跑 ✅ (客人登入)
 0016_coupons.sql                    ← 業主已跑 ✅ (優惠券)
-0017_loyalty_points.sql             ← 待跑 (集點卡)
+0017_loyalty_points.sql             ← 業主已跑 ✅ (集點)
+0018_points_redemption.sql          ← 待跑 (點數兌換 + bookings 加 points_used / points_discount)
 ```
 
 到 Supabase Dashboard → SQL Editor 貼 → Run。**任何 AI 動 LINE 通知功能前要先確認 0014 已套用** (用 service_role curl `notify_booking_payload` RPC 試試,有回資料就代表 0014 跑了)。

@@ -159,7 +159,11 @@ async function markPaid(b: Booking) {
     paid_at: new Date().toISOString(),
     hold_expires_at: null,
   }).eq('id', b.id)
-  if (e) error.value = e.message
+  if (e) { error.value = e.message; return }
+  $fetch('/api/notify/deposit-paid', {
+    method: 'POST',
+    body: { bookingId: b.id },
+  }).catch((err) => console.warn('deposit-paid notify failed', err))
   await fetchBookings()
 }
 async function setStatus(b: Booking, status: Booking['status']) {

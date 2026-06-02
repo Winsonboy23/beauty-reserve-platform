@@ -128,6 +128,54 @@ const totalDeposit = computed(() => {
   return n
 })
 
+// ---------- 點數 (需登入) ----------
+const myPoints = ref<{ balance: number; redeemValue: number } | null>(null)
+const pointsToRedeem = ref(0)
+
+async function loadPoints() {
+  if (!user.value || !tenantBase.value) return
+  // 抓會員 balance + tenant redeem rate (兩個查詢)
+  const [m, t] = await Promise.all([
+    supabase.from('members')
+      .select('points_balance')
+      .eq('tenant_id', tenantBase.value.id)
+      .eq('user_id', user.value.id)
+      .maybeSingle(),
+    supabase.from('tenants')
+      .select('points_redeem_value, points_earn_per_dollar')
+      .eq('id', tenantBase.value.id)
+      .maybeSingle(),
+  ])
+  if (m.data && t.data && Number(t.data.points_earn_per_dollar) > 0) {
+    myPoints.value = {
+      balance: m.data.points_balance,
+      redeemValue: Number(t.data.points_redeem_value),
+    }
+  }
+}
+watch(user, loadPoints, { immediate: true })
+
+// 折抵後最終價格
+const afterCouponPrice = computed(() => {
+  if (couponState.value.state === 'valid') return couponState.value.final_amount
+  return totalPrice.value
+})
+const maxRedeemablePoints = computed(() => {
+  if (!myPoints.value) return 0
+  const fromBalance = myPoints.value.balance
+  const fromCap = Math.floor(afterCouponPrice.value / myPoints.value.redeemValue)
+  return Math.max(0, Math.min(fromBalance, fromCap))
+})
+const pointsDiscount = computed(() => {
+  if (!myPoints.value) return 0
+  return Math.min(pointsToRedeem.value, maxRedeemablePoints.value) * myPoints.value.redeemValue
+})
+const finalPrice = computed(() => Math.max(0, afterCouponPrice.value - pointsDiscount.value))
+
+watch(maxRedeemablePoints, (max) => {
+  if (pointsToRedeem.value > max) pointsToRedeem.value = max
+})
+
 // ---------- 優惠碼 ----------
 const couponCode = ref('')
 const couponState = ref<
@@ -264,6 +312,7 @@ async function submit() {
     staffId: useAny ? undefined : selectedStaffId.value!,
     addonIds: Array.from(selectedAddonIds.value),
     couponCode: couponState.value.state === 'valid' ? couponCode.value.trim() : undefined,
+    pointsToRedeem: pointsToRedeem.value > 0 ? pointsToRedeem.value : undefined,
   })
   if (result) {
     submitted.value = result
@@ -487,6 +536,26 @@ function reset() {
             <textarea v-model="customer.note" rows="2" placeholder="特殊需求,可空白" class="lg-textarea" />
           </label>
 
+          <!-- 點數兌換 (登入且 tenant 有開啟才顯示) -->
+          <div v-if="myPoints" class="points-redeem">
+            <div class="pr-head">
+              <span class="lg-field-label">用點數折抵</span>
+              <span class="lg-footnote lg-muted">餘額 {{ myPoints.balance }} 點 · 1 點 = ${{ myPoints.redeemValue }}</span>
+            </div>
+            <div class="pr-row">
+              <input v-model.number="pointsToRedeem" type="number" min="0" :max="maxRedeemablePoints"
+                     class="lg-input pr-input" />
+              <span class="lg-footnote">/ {{ maxRedeemablePoints }} 點可用</span>
+              <button type="button" class="lg-btn lg-btn-secondary lg-btn-sm"
+                      @click="pointsToRedeem = maxRedeemablePoints">最大</button>
+              <button type="button" class="lg-btn lg-btn-secondary lg-btn-sm"
+                      @click="pointsToRedeem = 0">清空</button>
+            </div>
+            <div v-if="pointsDiscount > 0" class="pr-msg lg-pill lg-pill-success">
+              折抵 ${{ pointsDiscount }} → 結帳 ${{ finalPrice }}
+            </div>
+          </div>
+
           <!-- 優惠碼 -->
           <label class="lg-field">
             <span class="lg-field-label">優惠碼 (可空)</span>
@@ -676,6 +745,11 @@ function reset() {
 .coupon-row { display: flex; gap: var(--s-2); }
 .coupon-row input { flex: 1; }
 .coupon-msg { margin-top: 4px; align-self: flex-start; white-space: normal; }
+.points-redeem { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3); background: rgba(255,255,255,0.5); border-radius: var(--r-control); border: 0.5px solid var(--border-hairline); }
+.pr-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; }
+.pr-row { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.pr-input { max-width: 100px; }
+.pr-msg { align-self: flex-start; }
 
 code { background: rgba(120, 120, 128, 0.12); padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
 code.ref {

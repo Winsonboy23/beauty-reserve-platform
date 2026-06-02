@@ -87,8 +87,6 @@ function fmtTime(iso: string) {
 
 // ---------- 動作 ----------
 async function markDepositPaid(b: Booking) {
-  // 用 mark_deposit_paid 是給 service_role 用的; 後台老闆從前端直接 update。
-  // 安全考量: tenant_isolation policy 已限制只能改自己店的; 設 status confirmed + paid_at。
   const { error: e } = await supabase
     .from('bookings')
     .update({
@@ -99,6 +97,11 @@ async function markDepositPaid(b: Booking) {
     })
     .eq('id', b.id)
   if (e) { error.value = e.message; return }
+  // fire-and-forget: 寄 Email + LINE 給客人
+  $fetch('/api/notify/deposit-paid', {
+    method: 'POST',
+    body: { bookingId: b.id },
+  }).catch((err) => console.warn('deposit-paid notify failed', err))
   await fetchBookings()
 }
 
