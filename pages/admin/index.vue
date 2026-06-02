@@ -105,6 +105,19 @@ async function markDepositPaid(b: Booking) {
   await fetchBookings()
 }
 
+async function sendReminder(b: Booking) {
+  try {
+    const res = await $fetch<any>('/api/notify/booking-reminder', {
+      method: 'POST', body: { bookingId: b.id },
+    })
+    const eOk = res?.result?.email?.ok ?? res?.result?.email?.skipped
+    const lOk = res?.result?.line?.ok ?? res?.result?.line?.skipped
+    error.value = `提醒已送出 (email: ${JSON.stringify(eOk)}, line: ${JSON.stringify(lOk)})`
+  } catch (e: any) {
+    error.value = '提醒失敗: ' + (e?.message ?? e)
+  }
+}
+
 async function setStatus(b: Booking, status: Booking['status']) {
   const patch: any = { status }
   if (status === 'completed') {
@@ -176,6 +189,7 @@ function depositLabel(s: Booking['deposit_status']) {
             </td>
             <td class="actions">
               <button v-if="b.deposit_status === 'pending'" @click="markDepositPaid(b)">標訂金已付</button>
+              <button v-if="b.status === 'pending' || b.status === 'confirmed'" class="ghost" @click="sendReminder(b)">提醒</button>
               <button v-if="b.status === 'pending' || b.status === 'confirmed'" class="ghost" @click="setStatus(b, 'completed')">完成</button>
               <button v-if="b.status !== 'cancelled'" class="ghost danger" @click="setStatus(b, 'cancelled')">取消</button>
               <button v-if="b.status === 'pending' || b.status === 'confirmed'" class="ghost" @click="setStatus(b, 'no_show')">爽約</button>

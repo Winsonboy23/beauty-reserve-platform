@@ -189,6 +189,64 @@ export function bookingCompletedEmail(
   return { subject: `感謝光臨 · ${b.tenant_name}`, html, text }
 }
 
+// =============================================================
+// 預約前 24h 提醒
+// =============================================================
+export function bookingReminderEmail(b: BookingForEmail, siteOrigin: string) {
+  const time = fmtTime(b.start_at, b.tenant_timezone)
+  const ref = shortRef(b.id)
+  const manageUrl = `${siteOrigin}/manage/${b.id}?t=${b.manage_token}`
+  const text = [
+    `${b.customer_name} 您好,`,
+    ``,
+    `提醒您明天 (${time}) 的預約:`,
+    ``,
+    `編號: ${ref}`,
+    `服務: ${b.service_name} (${b.duration_minutes} 分)`,
+    `設計師: ${b.staff_name}`,
+    `店家: ${b.tenant_name}`,
+    ``,
+    `若需改期或取消, 請使用此連結:`,
+    manageUrl,
+    ``,
+    `期待見到您!`,
+  ].join('\n')
+
+  const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${escape(b.tenant_name)} 預約提醒</title></head>
+<body style="margin:0; background:#f3eedd; font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif; color:#1a1a1a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3eedd; padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background:#fdfaf1; border:1px solid #2b2b2b; border-radius:14px; overflow:hidden;">
+        <tr><td style="padding:24px 28px 8px;">
+          <h1 style="margin:0 0 8px; font-family:Georgia,serif; font-weight:400; font-size:24px;">⏰ 預約提醒</h1>
+          <p style="margin:0 0 16px; color:#7a7570; font-size:14px;">${escape(b.tenant_name)}</p>
+        </td></tr>
+        <tr><td style="padding:0 28px 16px;">
+          <p style="margin:0 0 16px; font-size:15px;">${escape(b.customer_name)} 您好,提醒您 24 小時內的預約:</p>
+          <div style="background:#fff; border:1px solid #d9d2bc; border-radius:8px; padding:16px;">
+            <p style="margin:0 0 8px; font-size:20px; font-weight:600;">${time}</p>
+            <table role="presentation" width="100%" cellpadding="4" cellspacing="0" style="font-size:14px;">
+              <tr><td style="color:#7a7570; width:60px;">編號</td><td><span style="background:#fff3cd; color:#b35900; padding:2px 8px; border-radius:4px; font-weight:700;">${ref}</span></td></tr>
+              <tr><td style="color:#7a7570;">服務</td><td>${escape(b.service_name)} <span style="color:#7a7570;">(${b.duration_minutes} 分)</span></td></tr>
+              <tr><td style="color:#7a7570;">設計師</td><td>${escape(b.staff_name)}</td></tr>
+            </table>
+          </div>
+        </td></tr>
+        <tr><td style="padding:0 28px 24px;">
+          <p style="margin:0 0 8px; font-size:13px; color:#7a7570;">需要改期或取消?</p>
+          <a href="${manageUrl}" style="display:inline-block; padding:10px 20px; background:#f5b945; color:#1a1a1a; text-decoration:none; border-radius:6px; border:1px solid #2b2b2b; font-size:14px; font-weight:500;">管理預約</a>
+        </td></tr>
+        <tr><td style="padding:16px 28px; border-top:1px solid #d9d2bc; background:#f5efd9; font-size:12px; color:#7a7570; text-align:center;">期待見到您!</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim()
+
+  return { subject: `⏰ 明日預約提醒 · ${b.tenant_name}`, html, text }
+}
+
 // 簡易 HTML escape (避免店家名 / 客人名含 <script> 等)
 function escape(s: string | null | undefined): string {
   if (!s) return ''

@@ -8,7 +8,7 @@
 ## 🚦 當前狀態
 
 **部署階段**: 本機開發中,還沒上線。  
-**最新 migration**: `0018_points_redemption.sql`  
+**最新 migration**: `0019_reminders_and_line_webhook.sql`  
 **Git remote**: https://github.com/Winsonboy23/beauty-reserve-platform (main 分支)  
 **Demo URL**: 本機 `http://demo-shop.lvh.me:3000`
 
@@ -23,8 +23,14 @@
 0015_customer_accounts.sql          ← 業主已跑 ✅ (客人登入)
 0016_coupons.sql                    ← 業主已跑 ✅ (優惠券)
 0017_loyalty_points.sql             ← 業主已跑 ✅ (集點)
-0018_points_redemption.sql          ← 待跑 (點數兌換 + bookings 加 points_used / points_discount)
+0018_points_redemption.sql          ← 業主已跑 ✅ (點數兌換)
+0019_reminders_and_line_webhook.sql ← 待跑 (24h 提醒 + LINE webhook 綁定 + pg_net + platform_settings)
 ```
+
+**生產環境上線後**:
+1. 到 SQL Editor 跑: `update platform_settings set notification_webhook_base_url = 'https://your-domain.com' where id = 1;`
+2. pg_cron 自動每 30 分鐘掃描預約; 24h 內未提醒的 → 自動 POST `/api/notify/booking-reminder`
+3. 各 tenant 的 LINE channel 設好 secret 後,到 LINE Developers 把 webhook URL 設成 `https://your-domain.com/api/webhook/line/<channel_id>`
 
 到 Supabase Dashboard → SQL Editor 貼 → Run。**任何 AI 動 LINE 通知功能前要先確認 0014 已套用** (用 service_role curl `notify_booking_payload` RPC 試試,有回資料就代表 0014 跑了)。
 

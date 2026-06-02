@@ -113,8 +113,12 @@ async function copyUrl() {
 const lineForm = reactive({
   channel_id: '',
   access_token: '',
+  channel_secret: '',
 })
-const lineStatus = ref<{ has_channel: boolean; has_token: boolean; channel_id: string | null; msgs_used_this_month: number } | null>(null)
+const lineStatus = ref<{
+  has_channel: boolean; has_token: boolean; has_secret: boolean
+  channel_id: string | null; msgs_used_this_month: number
+} | null>(null)
 const lineSaving = ref(false)
 const lineMsg = ref<string | null>(null)
 
@@ -137,12 +141,14 @@ async function saveLine() {
     p_tenant_id: tenant.value.id,
     p_channel_id: lineForm.channel_id,
     p_access_token: lineForm.access_token,
+    p_channel_secret: lineForm.channel_secret,
   })
   lineSaving.value = false
   if (e) lineMsg.value = e.message
   else {
     lineMsg.value = '已儲存'
-    lineForm.access_token = '' // 不在前端保留 token
+    lineForm.access_token = ''
+    lineForm.channel_secret = ''
     await loadLineStatus()
   }
 }
@@ -151,12 +157,18 @@ async function clearLine() {
   if (!confirm('確定移除 LINE 設定?')) return
   if (!tenant.value) return
   await supabase.rpc('tenant_line_settings_set', {
-    p_tenant_id: tenant.value.id, p_channel_id: '', p_access_token: '',
+    p_tenant_id: tenant.value.id, p_channel_id: '', p_access_token: '', p_channel_secret: '',
   })
   lineForm.channel_id = ''
   lineForm.access_token = ''
+  lineForm.channel_secret = ''
   await loadLineStatus()
 }
+
+const webhookUrl = computed(() => {
+  if (!lineForm.channel_id || process.server) return ''
+  return `${location.origin}/api/webhook/line/${lineForm.channel_id}`
+})
 </script>
 
 <template>
@@ -248,6 +260,18 @@ async function clearLine() {
           <input v-model="lineForm.access_token" type="password"
                  :placeholder="lineStatus?.has_token ? '已設定,留空維持原值' : '貼入 token'" />
         </label>
+        <label class="field">Channel Secret (webhook 驗證用)
+          <input v-model="lineForm.channel_secret" type="password"
+                 :placeholder="lineStatus?.has_secret ? '已設定,留空維持原值' : '貼入 secret'" />
+        </label>
+      </div>
+
+      <div v-if="webhookUrl && lineStatus?.has_secret" class="webhook-info">
+        <p class="muted small">
+          填上面 3 欄後,到 LINE Developers → 該 channel → Messaging API → Webhook URL 設成:
+        </p>
+        <code class="url">{{ webhookUrl }}</code>
+        <p class="muted small">並打開「Use webhook」。客人加你的 OA 為好友後,傳電話即可自動綁定。</p>
       </div>
 
       <div class="actions-inline">
@@ -290,4 +314,6 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .lg-pill.warn { background: #fff5e6; color: #b35900; }
 .actions-inline { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
 .actions-inline .ghost { background: transparent; }
+.webhook-info { margin-top: 0.75rem; padding: 0.75rem; background: #fff; border: 1px dashed #d9d2bc; border-radius: 6px; }
+.webhook-info .url { display: block; font-size: 0.85rem; padding: 0.4rem 0.6rem; background: #f7f2e3; border-radius: 4px; word-break: break-all; margin: 0.3rem 0; }
 </style>
