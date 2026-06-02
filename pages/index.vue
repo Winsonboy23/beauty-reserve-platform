@@ -21,7 +21,10 @@ useSeoMeta({
       <section class="hero glass-strong">
         <h1 class="lg-largetitle">{{ tenant.name }}</h1>
         <p class="lg-callout lg-muted">線上 24 小時自助預約,不用打電話。</p>
-        <NuxtLink to="/book" class="lg-btn lg-btn-filled cta">立即預約</NuxtLink>
+        <div class="cta-row">
+          <NuxtLink to="/book" class="lg-btn lg-btn-filled cta">立即預約</NuxtLink>
+          <NuxtLink to="/staff" class="lg-btn lg-btn-secondary cta">看設計師作品</NuxtLink>
+        </div>
       </section>
     </template>
 
@@ -72,7 +75,8 @@ useSeoMeta({
 }
 .hero h1 { margin: 0; }
 .lead { margin: 0; max-width: 460px; }
-.cta { margin-top: var(--s-3); padding: 14px 32px; font-size: var(--t-headline); }
+.cta { padding: 14px 32px; font-size: var(--t-headline); }
+.cta-row { display: flex; gap: var(--s-2); flex-wrap: wrap; justify-content: center; margin-top: var(--s-3); }
 
 .features {
   display: grid;

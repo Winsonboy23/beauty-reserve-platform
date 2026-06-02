@@ -9,6 +9,9 @@ interface Staff { id: string; name: string; portfolio: string[] }
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
+const route = useRoute()
+// 預選 staff (從 /staff/[id] 進來時帶 ?staff=<id>)
+const preselectStaffId = ref<string | null>((route.query.staff as string) || null)
 const tenantBase = useState<{
   id: string; name: string; slug: string; timezone: string
 } | null>('tenant')
@@ -230,7 +233,6 @@ watch(selectedServiceId, async (sid) => {
   selectedStaffId.value = null
   eligibleStaff.value = []
   if (!sid || !tenant.value) return
-  // staff_services join staff,取啟用 + 能做此服務的設計師
   const { data } = await supabase
     .from('staff_services')
     .select('staff:staff_id(id, name, is_active, tenant_id)')
@@ -239,7 +241,6 @@ watch(selectedServiceId, async (sid) => {
     .map((r: any) => r.staff)
     .filter((s: any) => s && s.is_active && s.tenant_id === tenant.value!.id)
 
-  // 拉每位設計師的前 3 張作品縮圖
   if (list.length) {
     const { data: pf } = await supabase
       .from('staff_portfolio')
@@ -253,6 +254,13 @@ watch(selectedServiceId, async (sid) => {
       byStaff.set(row.staff_id, arr)
     }
     eligibleStaff.value = list.map((s: any) => ({ id: s.id, name: s.name, portfolio: byStaff.get(s.id) ?? [] }))
+  }
+
+  // 若 URL 帶 ?staff=<id> 且該 staff 也能做此服務 → 自動選
+  if (preselectStaffId.value) {
+    const matched = eligibleStaff.value.find(s => s.id === preselectStaffId.value)
+    if (matched) selectedStaffId.value = matched.id
+    preselectStaffId.value = null  // 只生效一次
   }
 })
 
