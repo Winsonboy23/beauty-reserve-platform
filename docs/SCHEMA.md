@@ -14,10 +14,11 @@ name            text
 slug            text unique         -- 用於子網域 + URL
 timezone        text default 'Asia/Taipei'
 plan            plan_tier default 'free'
-bank_name           text  -- 訂金匯款資訊 (0004)
-bank_account_no     text
-bank_account_holder text
-bank_transfer_note  text
+bank_name / bank_account_no / bank_account_holder / bank_transfer_note  (0004)
+line_channel_id / line_channel_access_token / line_msgs_used_this_month (0014)
+line_channel_secret (0019)
+line_oa_share_url   (0020)  -- 加好友連結
+points_earn_per_dollar / points_redeem_value (0017)
 created_at / updated_at
 ```
 **RLS**: 後台 `authenticated` 只能讀寫自己 tenant; anon `public_read_tenants` 全表可讀 (storefront 需依 slug 查)。
@@ -74,7 +75,11 @@ primary key (staff_id, service_id)
 id, tenant_id, name, phone, email
 note, tags text[]
 is_blacklisted boolean default false   -- 0005
-unique (tenant_id, phone)   -- 同店電話為自然鍵
+line_user_id text                       -- 0014 LINE OA push 目標
+user_id uuid → auth.users               -- 0015 客人登入綁定
+points_balance int default 0            -- 0017 集點餘額
+unique (tenant_id, phone)               -- 同店電話為自然鍵
+unique (tenant_id, user_id) where user_id is not null
 ```
 
 ### staff_availability_rules — 週固定班表
@@ -120,6 +125,14 @@ manage_token text not null default encode(gen_random_bytes(16),'hex')
 -- 加購 + 結帳 (0011)
 addon_ids uuid[] default '{}'
 actual_amount numeric(10,2)
+
+-- 優惠券 (0016)
+coupon_id uuid → coupons
+discount_amount numeric(10,2)
+
+-- 點數兌換 (0018)
+points_used int default 0
+points_discount numeric(10,2) default 0
 ```
 **Key constraint**: `bookings_no_overlap` exclusion using gist `(staff_id with =, time_range with &&) where (status <> 'cancelled')`
 
@@ -129,6 +142,62 @@ id, tenant_id, staff_id
 storage_path text         -- portfolio bucket 相對路徑
 caption text
 sort_order int
+```
+
+### notification_log (0013) — 跨通道 idempotency
+```
+id, tenant_id, booking_id
+channel text         -- 'email' | 'line' | 'cron'
+kind text            -- 'booking_created' | 'deposit_paid' | 'booking_completed' | 'reminder_24h' | 'reminder_24h_dispatched'
+recipient text
+status text          -- 'sent' | 'failed' | 'queued'
+provider_ref text
+error_message text
+created_at
+unique (booking_id, channel, kind)
+```
+
+### coupons (0016)
+```
+id, tenant_id, code (unique per tenant), name
+discount_type ('percent' | 'fixed'), discount_value
+min_amount, max_uses, max_uses_per_member
+valid_from, valid_until, is_active
+```
+
+### coupon_uses (0016)
+```
+id, tenant_id, coupon_id, booking_id (unique), member_id, amount_off, used_at
+```
+
+### loyalty_transactions (0017)
+```
+id, tenant_id, member_id
+points int          -- 正=賺、負=用
+balance_after int
+source text         -- 'earned_from_booking' | 'redeemed' | 'manual_adjust' | 'expired'
+booking_id, note, created_at
+unique (booking_id) where source='earned_from_booking'  -- 一筆 booking 一次賺點
+```
+
+### service_categories (0001, UI 在 0011 完成)
+```
+id, tenant_id, name, sort_order
+```
+
+### platform_settings (0019) — 單行
+```
+id smallint = 1
+notification_webhook_base_url text   -- 24h 提醒 cron 用
+reminder_dispatch_secret text
+updated_at
+```
+
+### line_pending_binding (0019) — LINE webhook 暫存
+```
+id, tenant_id, line_user_id
+created_at
+unique (tenant_id, line_user_id)
 ```
 
 ---
@@ -232,6 +301,7 @@ sort_order int
 |----------|----------|---------|
 | `release-holds` | `*/5 * * * *` | `select cleanup_expired_holds()` |
 | `auto-downgrade-trials` | `0 3 * * *` | `select auto_downgrade_trials()` |
+| `dispatch-reminders` | `*/30 * * * *` | `select dispatch_pending_reminders()` (0019, 需 platform_settings.notification_webhook_base_url) |
 
 ---
 

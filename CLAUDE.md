@@ -61,22 +61,32 @@
 │   └── auth.ts               ← /admin/* 守衛
 ├── pages/
 │   ├── index.vue             ← 店家品牌頁 / 平台 landing
-│   ├── book.vue              ← 4-step 預約 (服務 → 加購 → 設計師 → 日期/時段 → 資料)
-│   ├── manage/[id].vue       ← 客人 token 自助管理 (改期 / 取消)
+│   ├── book.vue              ← 5-step 預約 (服務 → 加購 → 設計師 → 日期/時段 → 資料 + 優惠碼 + 點數)
+│   ├── login.vue             ← 客人 sign in / sign up
+│   ├── my.vue                ← 客人 dashboard (等級 / 累積 / 點數 / 預約歷史)
+│   ├── services/index.vue    ← 公開服務列表 (按分類)
+│   ├── staff/index.vue       ← 設計師團隊
+│   ├── staff/[id].vue        ← 設計師個人頁 + 作品集 (含 JSON-LD)
+│   ├── manage/[id].vue       ← 訪客 token 自助管理
 │   └── admin/
 │       ├── login.vue
-│       ├── index.vue         ← 預約清單 (14 天 list view)
-│       ├── calendar.vue      ← 月視圖網格 (cream + 米黃 spec)
-│       ├── services/index.vue ← 服務 CRUD + 分類 + 加購 + 代表圖
-│       ├── staff/index.vue   ← 員工列表
-│       ├── staff/[id].vue    ← 員工編輯 + 服務指派 + 班表 + 作品集
-│       ├── members/index.vue ← 會員列表 (黑名單 / 用量統計)
-│       ├── members/[id].vue  ← 會員詳細 + 預約歷史
+│       ├── index.vue         ← 預約清單 + 提醒按鈕
+│       ├── calendar.vue      ← 月視圖網格 (cream)
+│       ├── services/index.vue ← 服務 + 分類 + 加購 CRUD
+│       ├── staff/index.vue / [id].vue
+│       ├── members/index.vue / [id].vue
+│       ├── coupons.vue       ← 優惠券 CRUD
+│       ├── reports.vue       ← 報表
 │       ├── billing.vue       ← 方案 + 用量
-│       ├── reports.vue       ← 營收 / 員工業績 / 服務排行
-│       └── settings.vue      ← 店家名稱 + slug + 銀行帳號
+│       └── settings.vue      ← 店家 / slug / 銀行 / LINE / 集點
+├── server/
+│   ├── api/notify/           ← booking-created / deposit-paid /
+│   │                            booking-completed / booking-reminder /
+│   │                            booking-line
+│   ├── api/webhook/line/[channel].post.ts
+│   └── utils/                ← email / line / email-templates
 └── supabase/
-    ├── migrations/0001..0012.sql ← schema (見 docs/SCHEMA.md)
+    ├── migrations/0001..0020.sql ← schema (見 docs/SCHEMA.md)
     └── seed/0001_demo_owner.sql  ← demo tenant seed
 ```
 
@@ -118,12 +128,20 @@ pnpm dev          # http://localhost:3000 + http://demo-shop.lvh.me:3000
 
 ## 9. 已知技術債
 
-- [ ] storefront 沒處理 dark mode (測過 admin,沒測 storefront)
-- [ ] 子網域邏輯本機 OK,生產還需 wildcard DNS + cert
-- [ ] Email / LINE 通知未做 (等 Zeabur)
-- [ ] 候補清單未做 (等通知)
-- [ ] 試用到期降 free 的 cron 已寫,但沒實際驗證跑過
-- [ ] 集點卡 / 優惠券 / 多分店 等 Phase 3 功能未做
+- [ ] **storefront 沒測 dark mode** (admin 已強制 light,前台未測; 業主明確不做)
+- [ ] **子網域邏輯本機 OK,生產還需 wildcard DNS + cert** (Cloudflare wildcard 是最快的路)
+- [ ] **試用到期降 free 的 cron 已寫,但沒實際驗證跑過** (要等 14 天)
+- [ ] **pg_cron + pg_net 排程沒實測** (本機跨不過 localhost,要在生產驗)
+- [ ] **`tenants.line_channel_*` 對 anon 還能讀** (0014 TODO; 生產前要 revoke column-level 或拆 view)
+- [ ] **沒自動化測試** — 全靠 curl + 手測
+
+業主明確 pending 的:
+- 部署 Zeabur + 真實 domain + SSL
+- 訂閱金流 (綠界定期定額)
+- 電子發票
+
+業主明確不做的:
+- 取消次數自動上限 / 評分系統 / 生日禮券 / 員工打卡 / 耗材庫存 / 候補名單 / storefront dark mode
 
 ## 10. 聯絡
 

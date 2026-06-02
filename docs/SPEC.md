@@ -52,27 +52,29 @@
 | 等候清單 | — | ❌ (等通知系統) |
 | 預約改期自助 | `pages/manage/[id].vue` + token | ✅ |
 | 會員系統 (後台) | `pages/admin/members/*.vue` | ✅ |
-| 會員系統 (客人端登入 + 歷史) | — | ❌ |
+| 會員系統 (客人端登入 + 歷史 + 會員等級) | `pages/login.vue` + `pages/my.vue` + `members.user_id` (0015) | ✅ |
 | 作品集照片 | `staff_portfolio` 表 + Storage | ✅ |
 | 服務代表圖 | `services.image_path` | ✅ |
 | 服務分類 | `service_categories` 表 + UI | ✅ |
 | 加購項目 | `services.is_addon` + `bookings.addon_ids` | ✅ |
-| 評價系統 | — | ❌ |
+| 評價系統 | — | ❌ (業主已決定不做) |
 | 偏好標籤 | `members.tags` | ✅ |
 
 ### Phase 2 — 通知 & 收款
 
 | 功能 | 狀態 |
 |------|------|
-| Email 通知 | ❌ 等 Zeabur 部署 |
-| LINE OA | ❌ |
-| 預約前提醒 | ❌ |
-| 取消/改期通知 | ❌ |
+| Email 通知 (預約成功 / 訂金已付 / 完成 / 24h 提醒) | ✅ Resend (0013, 0019) |
+| LINE OA push (預約成功 / 訂金已付 / 完成 / 24h 提醒) | ✅ Messaging API (0014, 0019) |
+| LINE webhook 自動綁定 user_id | ✅ (0019) |
+| 預約前提醒 (24h 自動) | ✅ pg_cron + pg_net dispatch (0019) |
+| 取消/改期通知 | ❌ (可加,優先度不高) |
 | 線上預付訂金 (人工轉帳) | ✅ |
-| 即時線上金流 | ❌ (md 規格走人工轉帳) |
+| 即時線上金流 | ❌ (md 規格走人工轉帳; 業主明確 pending) |
 | 現場結帳記錄 | ✅ `bookings.actual_amount` |
-| 發票/收據 | ❌ |
-| 優惠券/折扣碼 | ❌ |
+| 發票/收據 | ❌ (業主明確 pending) |
+| 優惠券/折扣碼 | ✅ (0016) |
+| 集點卡 / 點數兌換 | ✅ (0017, 0018) |
 
 ### Phase 3 — 數據 & 進階
 
@@ -195,3 +197,11 @@
 | 0010 | tenants.slug 格式 check (3-30, lowercase, alnum + hyphen) |
 | 0011 | services.is_addon + bookings.addon_ids + bookings.actual_amount + 重寫 create_booking + tenant_report RPC |
 | 0012 | fix tenant_report (member_visits 漏 join) |
+| 0013 | notification_log 跨通道 idempotency |
+| 0014 | tenants.line_* + members.line_user_id + tenant_line_settings RPCs + notify_booking_payload |
+| 0015 | members.user_id 客人 Auth 綁定 + customer_link_member / reschedule / cancel RPCs + booking 自動關聯登入者 |
+| 0016 | coupons + coupon_uses + validate_coupon + 重寫 create_booking 加 p_coupon_code |
+| 0017 | tenants.points_* + members.points_balance + loyalty_transactions + award / adjust RPCs |
+| 0018 | bookings.points_used + bookings.points_discount + 重寫 create_booking 加 p_points_to_redeem |
+| 0019 | platform_settings + pending_reminder_bookings + dispatch_pending_reminders (pg_cron + pg_net) + LINE webhook 表 + bind_line_user RPC + tenants.line_channel_secret |
+| 0020 | tenants.line_oa_share_url (LINE 加好友連結) |
